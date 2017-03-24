@@ -1,0 +1,136 @@
+header: 
+  seq: 3
+  stamp: 
+    secs: 1490380815
+    nsecs: 929619742
+  frame_id: map
+pose: 
+  position: 
+    x: 3.42769742012
+    y: -4.46560287476
+    z: 0.0
+  orientation: 
+    x: 0.0
+    y: 0.0
+    z: 0.680360198556
+    w: 0.732877889024
+---
+header: 
+  seq: 4
+  stamp: 
+    secs: 1490380822
+    nsecs: 708844670
+  frame_id: map
+pose: 
+  position: 
+    x: 3.43224477768
+    y: -4.44762134552
+    z: 0.0
+  orientation: 
+    x: 0.0
+    y: 0.0
+    z: 0.371235658481
+    w: 0.928538683024
+---
+header: 
+  seq: 5
+  stamp: 
+    secs: 1490380827
+    nsecs: 588732277
+  frame_id: map
+pose: 
+  position: 
+    x: 3.44738006592
+    y: -4.50602340698
+    z: 0.0
+  orientation: 
+    x: 0.0
+    y: 0.0
+    z: -0.0407121288048
+    w: 0.999170917595
+---
+header: 
+  seq: 6
+  stamp: 
+    secs: 1490380832
+    nsecs: 636553381
+  frame_id: map
+pose: 
+  position: 
+    x: 3.47015523911
+    y: -4.50195407867
+    z: 0.0
+  orientation: 
+    x: 0.0
+    y: 0.0
+    z: -0.419557599865
+    w: 0.907728715199
+---
+header: 
+  seq: 7
+  stamp: 
+    secs: 1490380838
+    nsecs: 172619361
+  frame_id: map
+pose: 
+  position: 
+    x: 3.3527071476
+    y: -4.60754776001
+    z: 0.0
+  orientation: 
+    x: 0.0
+    y: 0.0
+    z: -0.687709141845
+    w: 0.725986319584
+---
+header: 
+  seq: 8
+  stamp: 
+    secs: 1490380842
+    nsecs: 396532130
+  frame_id: map
+pose: 
+  position: 
+    x: 3.38947629929
+    y: -4.62918138504
+    z: 0.0
+  orientation: 
+    x: 0.0
+    y: 0.0
+    z: 0.926891559876
+    w: -0.375329237111
+---
+header: 
+  seq: 9
+  stamp: 
+    secs: 1490380846
+    nsecs: 396508228
+  frame_id: map
+pose: 
+  position: 
+    x: 3.32000780106
+    y: -4.60869026184
+    z: 0.0
+  orientation: 
+    x: 0.0
+    y: 0.0
+    z: 0.991441736315
+    w: 0.130549927205
+---
+header: 
+  seq: 10
+  stamp: 
+    secs: 1490380850
+    nsecs: 804519202
+  frame_id: map
+pose: 
+  position: 
+    x: 3.36327457428
+    y: -4.5351524353
+    z: 0.0
+  orientation: 
+    x: 0.0
+    y: 0.0
+    z: 0.905846523598
+    w: 0.423606038301
+
