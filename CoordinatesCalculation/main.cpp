@@ -29,14 +29,13 @@ Point wantedPosition(Point p1, Point p2)   // (x1,y1) -> Robot's position, (x2, 
     double y1 = p1.getY();
     double x2 = p2.getX();
     double y2 = p2.getY();
-    double x3,y3;
+    double x3=0.0,y3=0.0;
 
-    int d = 10;
+    double d = 10.0;
     double k = (y2-y1)/(x2-x1);
-    double c = y1 - k*x1;
     double a = pow(k,2) + 1;
     double b = (-2*x2) + (-2*k*(k*x1 - y1 + y2));
-    c = pow(x2,2) + pow((pow(k,x1) - y1 + y2),2) - pow(d,2);
+    double c = pow(x2,2) + pow(k*x1 - y1 + y2),2) - pow(d,2);
 
     double x31 = (-b + sqrt((pow(b,2)) - 4*a*c ))/(2*a);
     double x32 = (-b - sqrt((pow(b,2)) - 4*a*c ))/(2*a);
@@ -51,7 +50,7 @@ Point wantedPosition(Point p1, Point p2)   // (x1,y1) -> Robot's position, (x2, 
         x3 = x31;
         y3 = y31;
     }
-    if(d2<d1)
+    else
     {
         x3 = x32;
         y3 = y32;
@@ -64,8 +63,8 @@ Point wantedPosition(Point p1, Point p2)   // (x1,y1) -> Robot's position, (x2, 
 
 int main()
 {
-    Point p1(100,300);
-    Point p2(500,800);
+    Point p1(50.0,300.0);
+    Point p2(800.0,750.0);
     Point p = wantedPosition(p1,p2);
     cout << p.getX() <<" "<< p.getY() << endl;
     return 0;
