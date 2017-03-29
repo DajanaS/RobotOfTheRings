@@ -11,136 +11,102 @@
 #include <actionlib/client/simple_action_client.h>
 #include <vector>
 #include <string>
+#include "read_goals.hpp"
+#include <cmath>
+#include "std_msgs/String.h"
+
+#ifndef PI
+#define PI 3.14159265359
+#endif
 
 using namespace std;
 using namespace cv;
 
+bool go_on = true;
+
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
-void send_goal(double* points)
+void stop_route(const std_msgs::String::ConstPtr& msg)
 {
-	
-	MoveBaseClient ac("move_base", true);
-		while(!ac.waitForServer(ros::Duration(5.0))){
-      ROS_INFO("Waiting for the move_base action server to come up");
-    }
-    
-	move_base_msgs::MoveBaseGoal goal;
-	goal.target_pose.header.frame_id = "map";
-  	goal.target_pose.header.stamp = ros::Time::now();
- 	goal.target_pose.pose.position.x = poins[0];
- 	goal.target_pose.pose.position.y = points[1];
-  	goal.target_pose.pose.orientation.w = points[2];
-  	goal.target_pose.pose.orientation.z = points[3];
-		
-	ROS_INFO("Sending goal");
-   	ac.sendGoal(goal);
-  	 
-    ac.waitForResult();
-   
-	if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
-    ROS_INFO("Hooray, the base reached the goal");
-	else
-    ROS_INFO("The base failed to move to the destination for some reason");
- }	
- 
- void make_turn(double* points)
- {
-	MoveBaseClient ac("move_base", true);
-	while(!ac.waitForServer(ros::Duration(5.0))){
-      ROS_INFO("Waiting for the move_base action server to come up");
-    }
-    
-	move_base_msgs::MoveBaseGoal goal;
-	goal.target_pose.header.frame_id = "map";
-  	goal.target_pose.header.stamp = ros::Time::now();
- 	goal.target_pose.pose.position.x = points[0];
- 	goal.target_pose.pose.position.y = points[1];
- 	
-  	goal.target_pose.pose.orientation.w = 0.732877889024;
-  	goal.target_pose.pose.orientation.z = 0.680360198556;
-	ROS_INFO("Turn move 1");
-   	ac.sendGoal(goal);
-  	ac.waitForResult();
-    if(!(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED))
-    ROS_INFO("Something went wrong, could not turn");
-    
-    goal.target_pose.pose.orientation.w = 0.928538683024;
-  	goal.target_pose.pose.orientation.z = 0.371235658481;
-	ROS_INFO("Turn move 2");
-   	ac.sendGoal(goal);
-  	ac.waitForResult();
-    if(!(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED))
-    ROS_INFO("Something went wrong, could not turn");
-    
-    goal.target_pose.pose.orientation.w = 0.999170917595;
-  	goal.target_pose.pose.orientation.z = -0.0407121288048;
-	ROS_INFO("Turn move 3");
-   	ac.sendGoal(goal);
-  	ac.waitForResult();
-    if(!(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED))
-    ROS_INFO("Something went wrong, could not turn");
-    
-	goal.target_pose.pose.orientation.w = 0.907728715199;
-  	goal.target_pose.pose.orientation.z = -0.419557599865;
-	ROS_INFO("Turn move 4");
-   	ac.sendGoal(goal);
-  	ac.waitForResult();
-    if(!(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED))
-    ROS_INFO("Something went wrong, could not turn");
-    
-    goal.target_pose.pose.orientation.w = 0.725986319584;
-  	goal.target_pose.pose.orientation.z = -0.687709141845;
-	ROS_INFO("Turn move 5");
-   	ac.sendGoal(goal);
-  	ac.waitForResult();
-    if(!(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED))
-    ROS_INFO("Something went wrong, could not turn");
-   
-	goal.target_pose.pose.orientation.w = -0.375329237111;
-  	goal.target_pose.pose.orientation.z = 0.926891559876;
-	ROS_INFO("Turn move 6");
-   	ac.sendGoal(goal);
-  	ac.waitForResult();
-    if(!(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED))
-    ROS_INFO("Something went wrong, could not turn");
-    
-    goal.target_pose.pose.orientation.w = 0.991441736315;
-  	goal.target_pose.pose.orientation.z = 0.130549927205;
-	ROS_INFO("Turn move 7");
-   	ac.sendGoal(goal);
-  	ac.waitForResult();
-    if(!(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED))
-    ROS_INFO("Something went wrong, could not turn");
-    
-    goal.target_pose.pose.orientation.w = 0.423606038301;
-  	goal.target_pose.pose.orientation.z = 0.905846523598;
-	ROS_INFO("Turn move 8");
-   	ac.sendGoal(goal);
-  	ac.waitForResult();
-    if(!(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED))
-    ROS_INFO("Something went wrong, could not turn");
-    
-    ROS_INFO("SPIN FINISEHD");
+   ROS_INFO("Stopping route now!");
+   go_on = false;
 }
-	 
- 
+
+move_base_msgs::MoveBaseGoal* get_goal(double* points)
+{   
+	move_base_msgs::MoveBaseGoal* goal = new move_base_msgs::MoveBaseGoal;
+	goal->target_pose.header.frame_id = "map";
+  	goal->target_pose.header.stamp = ros::Time::now();
+ 	goal->target_pose.pose.position.x = points[0];
+ 	goal->target_pose.pose.position.y = points[1];
+  	goal->target_pose.pose.orientation.z = points[2];
+  	goal->target_pose.pose.orientation.w = points[3];
+	return goal;
+}
+
+move_base_msgs::MoveBaseGoal* do_a_turn(double* points)
+{   
+	move_base_msgs::MoveBaseGoal* goal = new move_base_msgs::MoveBaseGoal;
+	goal->target_pose.header.frame_id = "map";
+  	goal->target_pose.header.stamp = ros::Time::now();
+ 	goal->target_pose.pose.position.x = points[0];
+ 	goal->target_pose.pose.position.y = points[1];
+ 	
+	static int i = 1;
+	double theta = -PI+i*2*PI/4;
+	goal->target_pose.pose.orientation.z = sin(theta/2);
+  	goal->target_pose.pose.orientation.w = cos(theta/2);
+	ROS_INFO("Theta %f", theta);
+	if(i == 3) i = 1;
+	else ++i;
+	return goal;
+}
  
  int main(int argc, char** argv) {
 
-    ros::init(argc, argv, "map_goals");
+    ros::init(argc, argv, "send_goals");
+    ros::NodeHandle n;
+    
+    ros::Subscriber sub = n.subscribe("goal_reached", 1000, &stop_route);
 
-	double goal[2];
-	goal[0] = 0.0;
-	goal[1] = 0.0;
-	
-	make_turn(goal);
-   /* while(ros::ok()) {
+	MoveBaseClient ac("move_base", true);
+	while(!ac.waitForServer(ros::Duration(1.0))){
+      ROS_INFO("Waiting for the move_base action server to come up");
+    }
 
-        waitKey(30);
+	ROS_INFO("Start reading goals");
+	double goals[100][4];
+	string path = "/home/marie/catkin_ws/Route_4.txt";
+	int numb_goals = createGoals_short(goals, path);
+	ROS_INFO("I got %d new goals", numb_goals);
 
-        ros::spinOnce();
-    }*/
+	for(int i = 0; i < numb_goals; ++i)
+	{
+		if(!go_on) break;
+		ROS_INFO("Sending goal %d",i);
+		move_base_msgs::MoveBaseGoal* goal = get_goal(goals[i]);
+		ac.sendGoal(*goal);
+		ac.waitForResult();
+		if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+			ROS_INFO("Hooray, the base reached the goal");
+		else
+			ROS_INFO("The base failed to move to the destination for some reason");
+		delete goal;
+		ros::Rate r(1);
+		for(int j = 0; j < 3; ++j)
+		{
+			if(!go_on) break;
+			ROS_INFO("Turning %d",j);
+			goal = do_a_turn(goals[i]);
+			ac.sendGoal(*goal);
+			ac.waitForResult();
+			if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+				ROS_INFO("Hooray, the base reached the goal");
+			else
+				ROS_INFO("The base failed to move to the destination for some reason");
+			delete goal;
+			//r.sleep();
+		}
+	}
     return 0;
-
 }
