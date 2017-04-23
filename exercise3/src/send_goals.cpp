@@ -9,117 +9,108 @@
 #include <vector>
 #include <move_base_msgs/MoveBaseAction.h>
 #include <actionlib/client/simple_action_client.h>
+#include <vector>
+#include <string>
+#include "read_goals.hpp"
+#include <cmath>
+#include "std_msgs/String.h"
+
+#ifndef PI
+#define PI 3.14159265359
+#endif
 
 using namespace std;
 using namespace cv;
 
+bool go_on = true;
+
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
-Mat cv_map;
-float map_resolution = 0;
-tf::Transform map_transform;
-
-ros::Publisher goal_pub;
-ros::Subscriber map_sub;
-MoveBaseClient ac("move_base", true);
-
-void send_goal(double x, double y);
-
-void mapCallback(const nav_msgs::OccupancyGridConstPtr& msg_map) {
-	ROS_INFO("Start to create the map now");
-    int size_x = msg_map->info.width;
-    int size_y = msg_map->info.height;
-
-    if ((size_x < 3) || (size_y < 3) ) {
-        ROS_INFO("Map size is only x: %d,  y: %d . Not running map to image conversion", size_x, size_y);
-        return;
-    }
-
-    // resize cv image if it doesn't have the same dimensions as the map
-    if ( (cv_map.rows != size_y) && (cv_map.cols != size_x)) {
-        cv_map = cv::Mat(size_y, size_x, CV_8U);
-    }
-
-    map_resolution = msg_map->info.resolution;
-	tf::poseMsgToTF(msg_map->info.origin, map_transform);
-
-    const std::vector<int8_t>& map_msg_data (msg_map->data);
-
-    unsigned char *cv_map_data = (unsigned char*) cv_map.data;
-
-    //We have to flip around the y axis, y for image starts at the top and y for map at the bottom
-    int size_y_rev = size_y-1;
-
-    for (int y = size_y_rev; y >= 0; --y) {
-
-        int idx_map_y = size_x * (size_y -y);
-        int idx_img_y = size_x * y;
-
-        for (int x = 0; x < size_x; ++x) {
-
-            int idx = idx_img_y + x;
-
-            switch (map_msg_data[idx_map_y + x])
-            {
-            case -1:
-                cv_map_data[idx] = 127;
-                break;
-
-            case 0:
-                cv_map_data[idx] = 255;
-                break;
-
-            case 100:
-                cv_map_data[idx] = 0;
-                break;
-            }
-        }
-    }
-    ROS_INFO("Start send_goal now");
-    send_goal(944.0,707.0);
+void stop_route(const std_msgs::String::ConstPtr& msg)
+{
+   ROS_INFO("Stopping route now!");
+   go_on = false;
 }
 
-void send_goal(double x, double y)
-{
-	tf::Point pt((float)x * map_resolution, (float)y * map_resolution, 0.0);
-	tf::Point transformed = map_transform * pt;
-	
-	move_base_msgs::MoveBaseGoal goal;
-	goal.target_pose.header.frame_id = "base_link";
-  	goal.target_pose.header.stamp = ros::Time::now();
- 	goal.target_pose.pose.position.x = transformed.x();
-  	goal.target_pose.pose.orientation.w = -transformed.y();
-		
-	ROS_INFO("Sending goal");
-   	ac.sendGoal(goal);
-  	 
-    ac.waitForResult();
-   
-	if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
-    ROS_INFO("Hooray, the base moved 1 meter forward");
-	else
-    ROS_INFO("The base failed to move forward 1 meter for some reason");
-    	
- }
+move_base_msgs::MoveBaseGoal* get_goal(double* points)
+{   
+	move_base_msgs::MoveBaseGoal* goal = new move_base_msgs::MoveBaseGoal;
+	goal->target_pose.header.frame_id = "map";
+  	goal->target_pose.header.stamp = ros::Time::now();
+ 	goal->target_pose.pose.position.x = points[0];
+ 	goal->target_pose.pose.position.y = points[1];
+  	goal->target_pose.pose.orientation.z = points[2];
+  	goal->target_pose.pose.orientation.w = points[3];
+	return goal;
+}
+
+move_base_msgs::MoveBaseGoal* do_a_turn(double* points)
+{   
+	move_base_msgs::MoveBaseGoal* goal = new move_base_msgs::MoveBaseGoal;
+	goal->target_pose.header.frame_id = "map";
+  	goal->target_pose.header.stamp = ros::Time::now();
+ 	goal->target_pose.pose.position.x = points[0];
+ 	goal->target_pose.pose.position.y = points[1];
+ 	
+	static int i = 1;
+	double theta = -PI+i*2*PI/4;
+	goal->target_pose.pose.orientation.z = sin(theta/2);
+  	goal->target_pose.pose.orientation.w = cos(theta/2);
+	ROS_INFO("Theta %f", theta);
+	if(i == 3) i = 1;
+	else ++i;
+	return goal;
+}
  
  int main(int argc, char** argv) {
 
-    ros::init(argc, argv, "map_goals");
+    ros::init(argc, argv, "send_goals");
     ros::NodeHandle n;
+    
+    ros::Subscriber sub = n.subscribe("goal_reached", 1000, &stop_route);
 
-    map_sub = n.subscribe("map", 10, &mapCallback);
-	//goal_pub = n.advertise<move_base_msgs::PoseStamped>("goal", 10);
-	
-	while(!ac.waitForServer(ros::Duration(5.0))){
+	MoveBaseClient ac("move_base", true);
+	while(!ac.waitForServer(ros::Duration(1.0))){
       ROS_INFO("Waiting for the move_base action server to come up");
     }
 
-    while(ros::ok()) {
-
-        waitKey(30);
-
-        ros::spinOnce();
-    }
+	ROS_INFO("Start reading goals");
+	double goals[100][4];
+	string path = "/home/marie/catkin_ws/Route_6.txt";
+	int numb_goals = createGoals_short(goals, path);
+	ROS_INFO("I got %d new goals", numb_goals);
+	int i = 0;
+	//for(int i = 0; i < numb_goals; ++i)
+	 while (ros::ok()) 
+	 {
+	    ros::spinOnce();
+		if(!go_on) break;
+		ROS_INFO("Sending goal %d",i);
+		move_base_msgs::MoveBaseGoal* goal = get_goal(goals[i]);
+		ac.sendGoal(*goal);
+		ac.waitForResult();
+		if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+			ROS_INFO("Hooray, the base reached the goal");
+		else
+			ROS_INFO("The base failed to move to the destination for some reason");
+		delete goal;
+		ros::Rate r(1);
+		for(int j = 0; j < 3; ++j)
+		{
+			if(!go_on) break;
+			ROS_INFO("Turning %d",j);
+			goal = do_a_turn(goals[i]);
+			ac.sendGoal(*goal);
+			ac.waitForResult();
+			if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+				ROS_INFO("Hooray, the base reached the goal");
+			else
+				ROS_INFO("The base failed to move to the destination for some reason");
+			delete goal;
+			//r.sleep();
+		}
+		++i;
+		if(i == numb_goals) i=0;
+	}
     return 0;
-
 }
