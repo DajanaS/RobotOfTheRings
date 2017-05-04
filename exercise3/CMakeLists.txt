@@ -9,13 +9,16 @@ find_package(catkin REQUIRED COMPONENTS
 	std_msgs
 	geometry_msgs
 	tf
+	image_transport
 )
 
 catkin_package()
 
 include_directories(include ${catkin_INCLUDE_DIRS})
 add_executable(map_goals src/map_goals.cpp)
-add_executable(send_goals src/send_goals.cpp)
+add_executable(movement src/movement.cpp)
+add_executable(blob src/blob.cpp)
 target_link_libraries(map_goals ${catkin_LIBRARIES})
-target_link_libraries(send_goals ${catkin_LIBRARIES})
+target_link_libraries(movement ${catkin_LIBRARIES})
+target_link_libraries(blob ${catkin_LIBRARIES})
 
