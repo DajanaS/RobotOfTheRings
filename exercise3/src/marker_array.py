@@ -7,7 +7,6 @@ from std_msgs.msg import String, Bool, ColorRGBA
 import sensor_msgs.msg
 import message_filters
 import collections
-from detection_msgs.msg import Detection
 from localizer.srv import Localize
 from sensor_msgs.msg import CameraInfo
 from visualization_msgs.msg import Marker, MarkerArray
@@ -48,9 +47,9 @@ class DetectionMapper():
 		#global tf
 		global numRings
 
-		u = detection.x + detection.width / 2
-		v = detection.y + detection.height / 2
-
+		u = detection.x
+		v = detection.y
+		print("System starting...")
 		camera_info = None
 		best_time = 100
 		for ci in self.camera_infos:
@@ -182,10 +181,10 @@ class DetectionMapper():
 		rospy.wait_for_service('localizer/localize')
 		self.pub = rospy.Publisher('goal_reached', String)
 		self.camera_infos = collections.deque(maxlen = self.buffer_size)
-		self.detections_sub = message_filters.Subscriber('detections', Detection)
+		self.detections_sub = message_filters.Subscriber('blob_topic', PoseStamped)
 		self.detections_sub.registerCallback(self.detections_callback)
 
-		self.camera_sub = message_filters.Subscriber('blob_topic', CameraInfo)
+		self.camera_sub = message_filters.Subscriber('camera_info', CameraInfo)
 		self.camera_sub.registerCallback(self.camera_callback)
 
 		self.localize = rospy.ServiceProxy('localizer/localize', Localize)
