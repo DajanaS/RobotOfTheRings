@@ -39,6 +39,7 @@ class DetectionMapper():
 
 
     def detections_callback(self, detection):
+		print("System starting...")
 		global counter
 		global maxDistance #the maximal distance between two points required for them to be considered the same detection	
 		global alreadyDetected 
@@ -49,7 +50,7 @@ class DetectionMapper():
 
 		u = detection.x
 		v = detection.y
-		print("System starting...")
+		
 		camera_info = None
 		best_time = 100
 		for ci in self.camera_infos:
@@ -194,10 +195,11 @@ class DetectionMapper():
    
 if __name__ == '__main__':
 
-        rospy.init_node('mapper')
-
-        try:
+	rospy.init_node('marker_array')
+	print("Above try")
+	try:
             mapper = DetectionMapper()
+	    print("Into main")
             r = rospy.Rate(30)
             while not rospy.is_shutdown():
                 mapper.flush()

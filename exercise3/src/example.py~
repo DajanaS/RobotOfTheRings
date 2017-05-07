@@ -7,6 +7,7 @@ from std_msgs.msg import String, Bool, ColorRGBA
 import sensor_msgs.msg
 import message_filters
 import collections
+from detection_msgs.msg import Detection
 from localizer.srv import Localize
 from sensor_msgs.msg import CameraInfo
 from visualization_msgs.msg import Marker, MarkerArray
@@ -18,11 +19,12 @@ import geometry_msgs.msg
 import rospy
 from std_msgs.msg import String
 
-numRings = 1
+numFaces = 1
 counter = 0
 maxDistance = 0.9
 alreadyDetected = [] # an array containing n points, the first n detected that were considered the same detection
-detected = [] #an array with the already passed rings
+n = 3 # number of points required in order to determine that the detection is a face
+detected = [] #an array with the already passed faces
 class DetectionMapper():
 
     def camera_callback(self, camera_info):
@@ -39,18 +41,20 @@ class DetectionMapper():
 
 
     def detections_callback(self, detection):
-		print("System starting...")
+		print("Entered in the callback function")
 		global counter
 		global maxDistance #the maximal distance between two points required for them to be considered the same detection	
 		global alreadyDetected 
+		global n 
 		global lastAdded	
 		global detected
 		#global tf
-		global numRings
+		global numFaces
 
-		u = detection.x
-		v = detection.y
-		
+		u = detection.pose.position.x
+		v = detection.pose.position.y
+		detection.header.stamp = rospy.Time.now() #call rospy.init.node before this to work
+
 		camera_info = None
 		best_time = 100
 		for ci in self.camera_infos:
@@ -61,7 +65,6 @@ class DetectionMapper():
 
 		if not camera_info or best_time > 1:
 			print("Best time is higher than 1")
-			return
 
 		camera_model = PinholeCameraModel()
 		camera_model.fromCameraInfo(camera_info)
@@ -83,7 +86,10 @@ class DetectionMapper():
 		m.pose = localization.pose
 		m.header.stamp = detection.header.stamp
 		transformedPoint = self.tf.transformPose("map", m)
-
+		
+		print(m.pose.position.x)
+		print(m.pose.position.y)	
+		
 		if( localization.pose.position.x != 0.0):
 
 			#print("Localisation: ", localization)
@@ -101,7 +107,7 @@ class DetectionMapper():
 				#print("Counter: ", counter)
 				dist = self.distance(transformedPoint, lastAdded)
 				
-				#print("Number of detected rings so far: ", len(detected))
+				#print("Number of detected faces so far: ", len(detected))
 				print("Distance is ", dist)
 				
 				if dist <= maxDistance:
@@ -117,7 +123,7 @@ class DetectionMapper():
 							#print("Distance: ", self.distance(p, transformedPoint))
 							
 							if self.distance(p, transformedPoint) <= maxDistance:
-								#print("This ring has already been detected")
+								#print("This face has already been detected")
 								#print("Distance: ", self.distance(p, transformedPoint))
 								beenDetected = True
 								break
@@ -140,16 +146,16 @@ class DetectionMapper():
 							marker.color = ColorRGBA(1, 0, 0, 1)
 							self.markers.markers.append(marker)
 							self.marker_id_counter += 1
-							self.soundhandle.say("I detected a ring.", blocking = False)
-							print("Number of detected rings: ", len(detected))							
-							if len(detected) == numRings:
+							self.soundhandle.say("I detected a face.", blocking = False)
+							print("Number of detected faces: ", len(detected))							
+							if len(detected) == numFaces:
 								#publish stop
 								
 								#rospy.init_node('mapper', anonymous=True)								
 								#msg = String()
-								#msg.data = "Found all rings."
+								#msg.data = "Found all faces."
 								print("Sending shutdown")
-								self.pub.publish("Found all rings.")
+								self.pub.publish("Found all faces.")
 								
 
 							
@@ -169,10 +175,11 @@ class DetectionMapper():
         #self.markers = MarkerArray()
 
     def __init__(self):
-		numRings = 1
+		numFaces = 1
 		counter = 0
 		maxDistance = 0.9
 		alreadyDetected = [] # an array containing n points, the first n detected that were considered the same detection
+		n = 3 # number of points required in order to determine that the detection is a face
 		detected = []
 		self.tf = TransformListener()
 		self.markers = MarkerArray()
@@ -182,26 +189,27 @@ class DetectionMapper():
 		rospy.wait_for_service('localizer/localize')
 		self.pub = rospy.Publisher('goal_reached', String)
 		self.camera_infos = collections.deque(maxlen = self.buffer_size)
-		self.detections_sub = message_filters.Subscriber('blob_topic', PoseStamped)
+		self.detections_sub = message_filters.Subscriber('blob_topic', geometry_msgs.msg.PoseStamped)
 		self.detections_sub.registerCallback(self.detections_callback)
 
-		self.camera_sub = message_filters.Subscriber('camera_info', CameraInfo)
+		self.camera_sub = message_filters.Subscriber('/camera/depth_registered/camera_info', CameraInfo)
 		self.camera_sub.registerCallback(self.camera_callback)
+
 
 		self.localize = rospy.ServiceProxy('localizer/localize', Localize)
 		self.markers_pub = rospy.Publisher('markers', MarkerArray)
-
-		self.soundhandle  = SoundClient()
    
 if __name__ == '__main__':
 
-	rospy.init_node('marker_array')
+	rospy.init_node('mapper')
 	print("Above try")
 	try:
+		print("Under try")
 		mapper = DetectionMapper()
-		print("Into main")
+		print("Mapper created")
 		r = rospy.Rate(30)
 		while not rospy.is_shutdown():
 			mapper.flush()
 			r.sleep()
 	except rospy.ROSInterruptException: pass
+

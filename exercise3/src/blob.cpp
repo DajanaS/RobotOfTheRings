@@ -112,6 +112,7 @@ src_gray.convertTo(src_gray, -1, alpha, beta);
 	pBase.pose.position.x = cvRound(circles[i][0]);
 	pBase.pose.position.y = cvRound(circles[i][1]);
 	pBase.pose.orientation = tf::createQuaternionMsgFromYaw(0.0);
+	pBase.header.stamp = ros::Time::now();	
 	/*ros::Time current_transform = ros::Time::now();
 	ROS_INFO("Waiting for transform");
 	listener.waitForTransform(pBase.header.frame_id, "map",current_transform, ros::Duration(3.0));
@@ -126,7 +127,8 @@ src_gray.convertTo(src_gray, -1, alpha, beta);
   	
 	imshow("Hough Circle Transform Demo",src_gray); // DISPLAY
   	//imshow( "Hough Circle Transform Demo", src );	
-	if(circles.size() > 0) ROS_INFO("Detected rings: %i", circles.size());
+	//if(circles.size() > 0)
+	ROS_INFO("Detected rings: %i", circles.size());
   }
 };
 
