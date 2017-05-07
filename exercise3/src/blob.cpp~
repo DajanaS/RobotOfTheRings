@@ -107,7 +107,7 @@ src_gray.convertTo(src_gray, -1, alpha, beta);
 
 	// Transform pixels into coordinates on the map:
 	geometry_msgs::PoseStamped pBase, pMap;
-	pBase.header.frame_id = "camera_rgb_optical_frame";
+	pBase.header.frame_id = "<camera>_rgb_optical_frame";
 	pMap.header.frame_id = "map";
 	pBase.pose.position.x = cvRound(circles[i][0]);
 	pBase.pose.position.y = cvRound(circles[i][1]);
