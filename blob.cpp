@@ -107,12 +107,13 @@ src_gray.convertTo(src_gray, -1, alpha, beta);
 
 	// Transform pixels into coordinates on the map:
 	geometry_msgs::PoseStamped pBase, pMap;
-	pBase.header.frame_id = "camera_rgb_optical_frame";
+	pBase.header.frame_id = msg->header.frame_id;//"camera_rgb_optical_frame";
 	//pMap.header.frame_id = "map";
 	pBase.pose.position.x = cvRound(circles[i][0]);
 	pBase.pose.position.y = cvRound(circles[i][1]);
+	pBase.pose.position.z = radius;
 	pBase.pose.orientation = tf::createQuaternionMsgFromYaw(0.0);
-	pBase.header.stamp = ros::Time::now();	
+	pBase.header.stamp = msg->header.stamp;//ros::Time::now();	
 	/*ros::Time current_transform = ros::Time::now();
 	ROS_INFO("Waiting for transform");
 	listener.waitForTransform(pBase.header.frame_id, "map",current_transform, ros::Duration(3.0));
