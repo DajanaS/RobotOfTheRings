@@ -143,6 +143,15 @@ class DetectionMapper():
 
 			dist = self.distance(robotmap,transformedPoint)
 			if( localization1.pose.position.x != 0.0 and localization2.pose.position.x != 0.0):
+				print("distance:")
+				print(dist)
+				print("radius:")
+				rad = (point1.y - point2.y)/2
+				print(rad)
+				print("height p1:")
+				print(point1.z)
+				print("height p2:")
+				print(point2.z)
 				if dist < 1.5:
 					return
 				if ((point1.y - point2.y)/2 > 0.7 or (point1.y - point2.y)/2 < 0.5):
