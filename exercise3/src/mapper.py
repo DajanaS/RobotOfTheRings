@@ -16,7 +16,6 @@ from geometry_msgs.msg import Point, Vector3
 import math
 from tf import TransformListener
 import geometry_msgs.msg
-from std_msgs.msg import String
 
 numFaces = 1
 counter = 0
@@ -72,8 +71,7 @@ class DetectionMapper():
 				avgx = avgx / 10
 				avgy = avgy / 10
 				avgr = avgr / 10
-				Point p = Point(((avgx - camera_model.cx()) - camera_model.Tx()) / camera_model.fx(),
-		     ((avgy - camera_model.cy()) - camera_model.Ty()) / camera_model.fy(), avgr)
+				p = Point(((avgx - camera_model.cx()) - camera_model.Tx()) / camera_model.fx(),((avgy - camera_model.cy()) - camera_model.Ty()) / camera_model.fy(), avgr)
 				lp = self.localize(detection.header, p, self.region_scope)
 				self.tf.waitForTransform(detection.header.frame_id, "map", rospy.Time.now(), rospy.Duration(5.0))
 				mp = geometry_msgs.msg.PoseStamped()
@@ -82,12 +80,15 @@ class DetectionMapper():
 				mp.header.stamp = detection.header.stamp
 				tp = self.tf.transformPose("map", mp)
 				if lp.pose.position.x != 0:
-					if ((point1.y - point2.y)/2 > 0.7 or (point1.y - point2.y)/2 < 0.5):
+					dp = self.distance(robotmap, tp)
+					if dp > 1.5:
 						tp.pose.position.z = -1
-					if (point1.z > 0.5 or point1.z < 0.3):
-						tp.pose.position.z = -1
-					if (point2.z > 0.5 or point2.z < 0.3): # visina
-						tp.pose.position.z = -1
+					#if ((point1.y - point2.y)/2 > 0.7 or (point1.y - point2.y)/2 < 0.5):
+					#	tp.pose.position.z = -1
+					#if (point1.z > 0.5 or point1.z < 0.3):
+					#	tp.pose.position.z = -1
+					#if (point2.z > 0.5 or point2.z < 0.3): # visina
+					#	tp.pose.position.z = -1
 				else:
 					tp.pose.position.z = -1
 				self.pub_avg_ring.publish(tp)
@@ -106,11 +107,11 @@ class DetectionMapper():
 
 			g = detection.pose.position.x
 			#w = avgx-avgr
-			h = detection.pose.position.y+detection.pose.position.z + 2
+			h = detection.pose.position.y+detection.pose.position.z + 4
 
 			r = detection.pose.position.x
 			#w = avgx-avgr
-			t = detection.pose.position.y+detection.pose.position.z - 2
+			t = detection.pose.position.y+detection.pose.position.z - 4
 			#q = avgy
 		
 			camera_info = None
@@ -245,6 +246,7 @@ class DetectionMapper():
 				#	return 
 				self.pub.publish(transformedPoint)
 				print("start checking")
+				print(len(detected))
 				if len(detected) == 0:
 					detected.append(transformedPoint)
 					beenDetected = False
@@ -252,6 +254,7 @@ class DetectionMapper():
 					beenDetected = False
 					for p in detected:
 						if self.distance(p, transformedPoint) <= maxDistance:
+							print("Already detected ring!")
 							beenDetected = True
 							break
 					
@@ -308,7 +311,7 @@ class DetectionMapper():
 		self.detections_sub = message_filters.Subscriber('blob_topic', geometry_msgs.msg.PoseStamped)
 		self.detections_sub.registerCallback(self.detections_callback)
 
-		self.detections_sub = message_filters.Subscriber('changeFlag', _msg.String.PoseStamped)
+		self.detections_sub = message_filters.Subscriber('changeFlag', String)
 		self.detections_sub.registerCallback(self.changeFlag_callback)	
 
 		self.camera_sub = message_filters.Subscriber('/camera/depth_registered/camera_info', CameraInfo)

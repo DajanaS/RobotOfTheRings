@@ -16,14 +16,13 @@ from geometry_msgs.msg import Point, Vector3
 import math
 from tf import TransformListener
 import geometry_msgs.msg
-from std_msgs.msg import String
 
 numFaces = 1
 counter = 0
 maxDistance = 0.5
 alreadyDetected = [] # an array containing n points, the first n detected that were considered the same detection
-n = 3 # number of points required in order to determine that the detection is a face
-detected = [] #an array with the already passed faces
+n = 3 # number of points required in order to determine that the detection is a ring
+detected = [] #an array with the already passed rings
 brojach = 0
 avgx = 0
 avgy = 0
@@ -43,6 +42,10 @@ class DetectionMapper():
 		res = math.sqrt(dd)
 		return res 
 
+    def changeFlag_callback(self, msg):
+	global flag
+        flag = 0
+
 
     def detections_callback(self, detection):
 		global counter
@@ -51,9 +54,7 @@ class DetectionMapper():
 		global n 
 		global lastAdded	
 		global detected
-		#global tf
 		global numFaces
-		
 		global brojach
 		global avgx
 		global avgy
@@ -70,19 +71,48 @@ class DetectionMapper():
 				avgx = avgx / 10
 				avgy = avgy / 10
 				avgr = avgr / 10
+				p = Point(((avgx - camera_model.cx()) - camera_model.Tx()) / camera_model.fx(),((avgy - camera_model.cy()) - camera_model.Ty()) / camera_model.fy(), avgr)
+				lp = self.localize(detection.header, p, self.region_scope)
+				self.tf.waitForTransform(detection.header.frame_id, "map", rospy.Time.now(), rospy.Duration(5.0))
+				mp = geometry_msgs.msg.PoseStamped()
+				mp.header.frame_id = detection.header.frame_id
+				mp.pose = lp.pose
+				mp.header.stamp = detection.header.stamp
+				tp = self.tf.transformPose("map", mp)
+				if lp.pose.position.x != 0:
+					dp = self.distance(robotmap, tp)
+					if dp > 1.5:
+						tp.pose.position.z = -1
+					#if ((point1.y - point2.y)/2 > 0.7 or (point1.y - point2.y)/2 < 0.5):
+					#	tp.pose.position.z = -1
+					#if (point1.z > 0.5 or point1.z < 0.3):
+					#	tp.pose.position.z = -1
+					#if (point2.z > 0.5 or point2.z < 0.3): # visina
+					#	tp.pose.position.z = -1
+				else:
+					tp.pose.position.z = -1
+				self.pub_avg_ring.publish(tp)
 				flag = 1
+				return
 			
 		if flag == 1:
 			u = detection.pose.position.x
 			#u = avgx+avgr
-			v = detection.pose.position.y+detection.pose.position.z 
+			v = detection.pose.position.y+detection.pose.position.z
 			#v = avgy
 
 			w = detection.pose.position.x
 			#w = avgx-avgr
-			q = detection.pose.position.y-detection.pose.position.z 
+			q = detection.pose.position.y-detection.pose.position.z
+
+			g = detection.pose.position.x
+			#w = avgx-avgr
+			h = detection.pose.position.y+detection.pose.position.z + 4
+
+			r = detection.pose.position.x
+			#w = avgx-avgr
+			t = detection.pose.position.y+detection.pose.position.z - 4
 			#q = avgy
-			#detection.header.stamp = rospy.Time.now() #call rospy.init_node() before this to work
 		
 			camera_info = None
 			best_time = 100
@@ -105,16 +135,22 @@ class DetectionMapper():
 
 			point2 = Point(((w - camera_model.cx()) - camera_model.Tx()) / camera_model.fx(),
 		     ((q - camera_model.cy()) - camera_model.Ty()) / camera_model.fy(), 1)
+
+			point3 = Point(((g - camera_model.cx()) - camera_model.Tx()) / camera_model.fx(),
+		     ((h - camera_model.cy()) - camera_model.Ty()) / camera_model.fy(), 1)
+
+
+			point4 = Point(((r - camera_model.cx()) - camera_model.Tx()) / camera_model.fx(),
+		     ((t - camera_model.cy()) - camera_model.Ty()) / camera_model.fy(), 1)
 	
 			localization1 = self.localize(detection.header, point1, self.region_scope)
 			localization2 = self.localize(detection.header, point2, self.region_scope)
-			transformedPoint1 = point1
-			transformedPoint2 = point2
+			localization3 = self.localize(detection.header, point3, self.region_scope)
+			localization4 = self.localize(detection.header, point4, self.region_scope)
 			if not localization1:
 				return
 
 			# calculate center
-			#center = Point( (localization1.pose.position.x+((localization2.pose.position.x-localization1.pose.position.x)/2)), localization1.pose.position.y, localization1.pose.position.z)
 			center = Point(localization1.pose.position.x, localization1.pose.position.y, localization1.pose.position.z)
 			now = detection.header.stamp
 			self.tf.waitForTransform(detection.header.frame_id, "map", now, rospy.Duration(5.0))
@@ -125,126 +161,126 @@ class DetectionMapper():
 			#m.pose.position.y = center.y
 			m.pose = localization1.pose
 			m.header.stamp = detection.header.stamp
-			transformedPoint = self.tf.transformPose("map", m)
+			transformedPoint1 = self.tf.transformPose("map", m)
+
+
+
+
+			m2 = geometry_msgs.msg.PoseStamped()
+			m2.header.frame_id = detection.header.frame_id
+			m2.pose = localization2.pose
+			m2.header.stamp = detection.header.stamp
+			transformedPoint2 = self.tf.transformPose("map", m2)
+
+
+
+
+			m3 = geometry_msgs.msg.PoseStamped()
+			m3.header.frame_id = detection.header.frame_id
+			m3.pose = localization3.pose
+			m3.header.stamp = detection.header.stamp
+			transformedPoint3 = self.tf.transformPose("map", m3)
+
+
+
+			m4 = geometry_msgs.msg.PoseStamped()
+			m4.header.frame_id = detection.header.frame_id
+			m4.pose = localization4.pose
+			m4.header.stamp = detection.header.stamp
+			transformedPoint4 = self.tf.transformPose("map", m4)
+
+
 			
-			now = rospy.Time.now()
-			self.tf2.waitForTransform("base_link", "map", now, rospy.Duration(5.0))
+			now2 = rospy.Time.now()
+			self.tf2.waitForTransform("base_link", "map", now2, rospy.Duration(5.0))
 
 			robot = geometry_msgs.msg.PoseStamped()
 			robot.header.frame_id = "base_link"
 			robot.pose.position.x = 0
 			robot.pose.position.y = 0
 			#robot.pose = localization1.pose
-			robot.header.stamp = now
+			robot.header.stamp = now2
 			robotmap = self.tf2.transformPose("map", robot)
 
-			#print(m.pose.position.x)
-			#print(m.pose.position.y)
-
-			dist = self.distance(robotmap,transformedPoint)
-			if( localization1.pose.position.x != 0.0 and localization2.pose.position.x != 0.0):
-				print("distance:")
-				print(dist)
-				print("radius:")
-				rad = (point1.y - point2.y)/2
-				print(rad)
-				print("height p1:")
-				print(point1.z)
-				print("height p2:")
-				print(point2.z)
-				if dist < 1.5:
-					return
-				if ((point1.y - point2.y)/2 > 0.7 or (point1.y - point2.y)/2 < 0.5):
-					return
-				if (point1.z > 0.5 or point1.z < 0.3):
-					return 
-				if (point2.z > 0.5 or point2.z < 0.3): # visina
-					return 
+			#dist = self.distance(robotmap,transformedPoint)
+			transformedPoint = transformedPoint1
+			if localization1.pose.position.x != 0:
+				dist1 = self.distance(robotmap, transformedPoint1)
+			else:
+				dist1 = 100000
+			if localization2.pose.position.x != 0:
+				dist2 = self.distance(robotmap, transformedPoint2)
+				transformedPoint = transformedPoint2
+			else:
+				dist2 = 100000
+			if localization3.pose.position.x != 0:
+				dist3 = self.distance(robotmap, transformedPoint3)
+				transformedPoint = transformedPoint3
+			else:
+				dist3 = 100000
+			if localization4.pose.position.x != 0:
+				dist4 = self.distance(robotmap, transformedPoint4)
+				transformedPoint = transformedPoint4
+			else:
+				dist4 = 100000
+			# find smallest distance to a point.
+			dist = dist1
+			if dist2 < dist:
+				dist = dist2
+			if dist3 < dist:
+				dist = dist3
+			if dist4 < dist:
+				dist = dist4
+			
+			print("distance: ", dist)	
+			if( dist < 1.5 ):
+				rad = abs((point1.y - point2.y)/2)
+				print("radius: ", rad)
+				print("height p1: ", point1.z)
+				print("height p2: ", point2.z)
+				#if ((point1.y - point2.y)/2 > 0.7 or (point1.y - point2.y)/2 < 0.5):
+				#	return
+				#if (point1.z > 0.5 or point1.z < 0.3):
+				#	return 
+				#if (point2.z > 0.5 or point2.z < 0.3): # visina
+				#	return 
 				self.pub.publish(transformedPoint)
-
-				#print("Localisation: ", localization)
-				#print("Transformation: ", transformedPoint)
-				#print("Point: ", point)
 				print("start checking")
-				if counter == 0:
-					#print("Counter is zero.")
-					counter+=1
-					lastAdded = transformedPoint
-					#print("Adding the point to the array.")
-					#alreadyDetected.append(transformedPoint)
-					#print(len(alreadyDetected))
+				print(len(detected))
+				if len(detected) == 0:
+					detected.append(transformedPoint)
+					beenDetected = False
 				else:
-					#print("Counter: ", counter)
-					dist = self.distance(transformedPoint, lastAdded)
-				
-					#print("Number of detected faces so far: ", len(detected))
-					print("Distance is ", dist)
-				
-					if True: #dist <= maxDistance:
-						#print("-----------Less then max----------------------------------")
-						if True: #counter < 2 or counter >= 2 :
-							#alreadyDetected.append(transformedPoint)
-							#print(len(alreadyDetected))			
-							lastAdded = transformedPoint
-							counter += 1
-							beenDetected = False
-							for p in detected:
-								#print("Checking already detected")
-								#print("Distance: ", self.distance(p, transformedPoint))
-							
-								if self.distance(p, transformedPoint) <= maxDistance:
-									#print("This face has already been detected")
-									#print("Distance: ", self.distance(p, transformedPoint))
-									beenDetected = True
-									break
-							
-							if(beenDetected == False):
-								print("-----------------Good to go------------------------")
-								detected.append(lastAdded)
-								print("Publishing new ring")
-								self.pub_ring.publish(transformedPoint)
-								print("before creating marker")
-								marker = Marker()
-
-								marker.header.stamp = detection.header.stamp
-								#marker.header.frame_id = detection.header.frame_id
-								#marker.pose.position.x = center.x
-								#marker.pose.position.y = center.y
-								#marker.pose.position.z = center.z
-
-								#marker.header.stamped = transformedPoint.header.stamped
-								marker.header.frame_id = transformedPoint.header.frame_id
-								marker.pose.position.x = transformedPoint.pose.position.x
-								marker.pose.position.y = transformedPoint.pose.position.y
-								marker.pose.position.z = transformedPoint.pose.position.z
-							
-								marker.type = Marker.CUBE
-								marker.action = Marker.ADD
-								marker.frame_locked = False
-								marker.lifetime = rospy.Duration.from_sec(1)
-								marker.id = self.marker_id_counter
-								marker.scale = Vector3(0.1, 0.1, 0.1)
-								marker.color = ColorRGBA(1, 0, 0, 1)
-								self.markers.markers.append(marker)
-								self.marker_id_counter += 1
-								print("Number of detected faces: ", len(detected))							
-								if len(detected) == numFaces:
-									#publish stop
-								
-									#rospy.init_node('mapper', anonymous=True)								
-									#msg = String()
-									#msg.data = "Found all faces."
-									print("Sending shutdown")
-								
-
-							
-					else:
-						#print("-----------------------------------------More then max----")
-						lastAdded = transformedPoint
+					beenDetected = False
+					for p in detected:
+						if self.distance(p, transformedPoint) <= maxDistance:
+							print("Already detected ring!")
+							beenDetected = True
+							break
 					
+				if(beenDetected == False):
+					print("Publishing new ring")
+					self.pub_ring.publish(transformedPoint)
+					marker = Marker()
+					marker.header.stamp = detection.header.stamp
+					marker.header.frame_id = transformedPoint.header.frame_id
+					marker.pose.position.x = transformedPoint.pose.position.x
+					marker.pose.position.y = transformedPoint.pose.position.y
+					marker.pose.position.z = transformedPoint.pose.position.z
+					marker.type = Marker.CUBE
+					marker.action = Marker.ADD
+					marker.frame_locked = False
+					marker.lifetime = rospy.Duration.from_sec(1)
+					marker.id = self.marker_id_counter
+					marker.scale = Vector3(0.1, 0.1, 0.1)
+					marker.color = ColorRGBA(1, 0, 0, 1)
+					self.markers.markers.append(marker)
+					self.marker_id_counter += 1
+					print("Number of detected rings: ", len(detected))							
+					if len(detected) == numFaces:
+						print("Sending shutdown")	
 			else:
 				print("Just zeros")
-				#print("Localisation: ", localization1)
 
 
     def flush(self):
@@ -270,9 +306,13 @@ class DetectionMapper():
 		rospy.wait_for_service('localizer/localize')
 		self.pub = rospy.Publisher('ring_position', geometry_msgs.msg.PoseStamped)
 		self.pub_ring = rospy.Publisher('new_ring', geometry_msgs.msg.PoseStamped)
+		self.pub_avg_ring = rospy.Publisher('avg_ring', geometry_msgs.msg.PoseStamped)
 		self.camera_infos = collections.deque(maxlen = self.buffer_size)
 		self.detections_sub = message_filters.Subscriber('blob_topic', geometry_msgs.msg.PoseStamped)
 		self.detections_sub.registerCallback(self.detections_callback)
+
+		self.detections_sub = message_filters.Subscriber('changeFlag', String)
+		self.detections_sub.registerCallback(self.changeFlag_callback)	
 
 		self.camera_sub = message_filters.Subscriber('/camera/depth_registered/camera_info', CameraInfo)
 		self.camera_sub.registerCallback(self.camera_callback)
