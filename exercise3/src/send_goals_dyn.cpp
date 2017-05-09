@@ -52,12 +52,6 @@ bool checkForOrange(int i, int j){
 
 }
 
-void shape1(int i, int j){
-    shape1_1(i, j);
-    shape1_2(i, j);
-    shape1_3(i, j);
-    shape1_4(i, j);
-}
 
 void shape1_1(int i, int j){
     if(taken[i][j+1] == black){
@@ -103,12 +97,15 @@ void shape1_4(int i, int j){
     }
 }
 
-void shape2(int i, int j){
-    shape2_1(i, j);
-    shape2_2(i, j);
-    shape2_3(i, j);
-    shape2_4(i, j);
+
+void shape1(int i, int j){
+    shape1_1(i, j);
+    shape1_2(i, j);
+    shape1_3(i, j);
+    shape1_4(i, j);
 }
+
+
 
 void shape2_1(int i, int j){
     if(taken[i][j+1] == black){
@@ -146,12 +143,14 @@ void shape2_4(int i, int j){
     }
 }
 
-void shape3(int i, int j){
-    shape3_1(i, j);
-    shape3_2(i, j);
-    shape3_3(i, j);
-    shape3_4(i, j);
+void shape2(int i, int j){
+    shape2_1(i, j);
+    shape2_2(i, j);
+    shape2_3(i, j);
+    shape2_4(i, j);
 }
+
+
 
 void shape3_1(int i, int j){
     if(taken[i+1][j] == black){
@@ -189,12 +188,14 @@ void shape3_4(int i, int j){
     }
 }
 
-void shape4(int i, int j){
-    shape4_1(i, j);
-    shape4_2(i, j);
-    shape4_3(i, j);
-    shape4_4(i, j);
+void shape3(int i, int j){
+    shape3_1(i, j);
+    shape3_2(i, j);
+    shape3_3(i, j);
+    shape3_4(i, j);
 }
+
+
 
 void shape4_1(int i, int j){
     if(taken[i][j+1] == black){
@@ -240,12 +241,14 @@ void shape4_4(int i, int j){
     }
 }
 
-void shape5(int i, int j){
-    shape5_1(i, j);
-    shape5_2(i, j);
-    shape5_3(i, j);
-    shape5_4(i, j);
+void shape4(int i, int j){
+    shape4_1(i, j);
+    shape4_2(i, j);
+    shape4_3(i, j);
+    shape4_4(i, j);
 }
+
+
 
 void shape5_1(int i, int j){
 
@@ -298,12 +301,14 @@ void shape5_4(int i, int j){
     }
 }
 
-void shape6(int i, int j){
-    shape6_1(i, j);
-    shape6_2(i, j);
-    shape6_3(i, j);
-    shape6_4(i, j);
+void shape5(int i, int j){
+    shape5_1(i, j);
+    shape5_2(i, j);
+    shape5_3(i, j);
+    shape5_4(i, j);
 }
+
+
 
 void shape6_1(int i, int j){
 
@@ -356,12 +361,13 @@ void shape6_4(int i, int j){
     }
 }
 
-void shape7(int i, int j){
-    shape7_1(i, j);
-    shape7_2(i, j);
-    shape7_3(i, j);
-    shape7_4(i, j);
+void shape6(int i, int j){
+    shape6_1(i, j);
+    shape6_2(i, j);
+    shape6_3(i, j);
+    shape6_4(i, j);
 }
+
 
 void shape7_1(int i, int j) {
 
@@ -401,12 +407,13 @@ void shape7_4(int i, int j){
             }
     }
 }
+void shape7(int i, int j){
+    shape7_1(i, j);
+    shape7_2(i, j);
+    shape7_3(i, j);
+    shape7_4(i, j);
+}
 
-void shape8(int i, int j){
-    shape8_1(i, j);
-    shape8_2(i, j);
-    shape8_3(i, j);
-    shape8_4(i, j);
 }
 
 void shape8_1(int i, int j) {
@@ -455,13 +462,14 @@ void shape8_4(int i, int j){
         }
     }
 }
+void shape8(int i, int j){
+    shape8_1(i, j);
+    shape8_2(i, j);
+    shape8_3(i, j);
+    shape8_4(i, j);
 
-void shape9(int i, int j){
-    shape9_1(i, j);
-    shape9_2(i, j);
-    shape9_3(i, j);
-    shape9_4(i, j);
-}
+
+
 
 void shape9_1(int i, int j) {
 
@@ -509,14 +517,14 @@ void shape9_4(int i, int j){
         }
     }
 }
-
-
-void shape10(int i, int j){
-    shape10_1(i, j);
-    shape10_2(i, j);
-    shape10_3(i, j);
-    shape10_4(i, j);
+void shape9(int i, int j){
+    shape9_1(i, j);
+    shape9_2(i, j);
+    shape9_3(i, j);
+    shape9_4(i, j);
 }
+
+
 
 void shape10_1(int i, int j){
     
@@ -558,6 +566,12 @@ void shape10_4(int i, int j){
         }
 }
 
+void shape10(int i, int j){
+    shape10_1(i, j);
+    shape10_2(i, j);
+    shape10_3(i, j);
+    shape10_4(i, j);
+}
 
 void doesItBelong(int i, int j){
     shape1(i, j);
