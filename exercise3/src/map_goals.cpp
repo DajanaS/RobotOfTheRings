@@ -98,9 +98,10 @@ void mouseCallback(int event, int x, int y, int, void* data) {
 
 int main(int argc, char** argv) {
 
+	ROS_INFO("Entered main.");
     ros::init(argc, argv, "map_goals");
     ros::NodeHandle n;
-
+	ROS_INFO("Past nodeHandle.");
     map_sub = n.subscribe("map", 10, &mapCallback);
 	goal_pub = n.advertise<geometry_msgs::PoseStamped>("goal", 10);
 

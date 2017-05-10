@@ -19,8 +19,10 @@ add_executable(map_goals src/map_goals.cpp)
 add_executable(movement src/movement.cpp)
 add_executable(blob src/blob.cpp)
 add_executable(send_goals_dyn src/send_goals_dyn.cpp)
+add_executable(find_goals src/find_goals.cpp)
 target_link_libraries(map_goals ${catkin_LIBRARIES})
 target_link_libraries(movement ${catkin_LIBRARIES})
 target_link_libraries(blob ${catkin_LIBRARIES})
 target_link_libraries(send_goals_dyn ${catkin_LIBRARIES})
-
+target_link_libraries(find_goals ${catkin_LIBRARIES})
+	

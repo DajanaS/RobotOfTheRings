@@ -1,10 +1,25 @@
-#define X_OFF_PXL 0.05//0.03
-#define Y_OFF_PXL -0.45//0.05
 #include <ros/ros.h>
 #include <geometry_msgs/PointStamped.h>
 #include <tf/transform_listener.h>
 #include <move_base_msgs/MoveBaseAction.h>
 #include <actionlib/client/simple_action_client.h>
+#include <nav_msgs/GetMap.h>
+#include <geometry_msgs/Quaternion.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <tf/transform_datatypes.h>
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include "std_msgs/String.h"
+//#include "mat.hpp"
+
+using namespace std;
+using namespace cv;
+
+#define X_OFF_PXL 0.05//0.03	
+#define Y_OFF_PXL -0.45//0.05
+
+ros::Subscriber map_sub;
+
 int **taken;
 
 int unknown = -1;
@@ -18,6 +33,9 @@ int blue = 140;
 int red = 120;
 int forestGreen = 200;
 int square = 3;
+
+int rWidth = 4;
+int rLength = 4;
 
 Mat cv_map;
 float map_resolution = 0;
@@ -49,10 +67,6 @@ bool checkForOrange(int i, int j){
 	return false;
 }
 
-
-}
-
-
 void shape1_1(int i, int j){
     if(taken[i][j+1] == black){
         if(taken[i+1][j] == black && taken[i+2][j] == black && taken[i+3][j] == black){
@@ -62,6 +76,7 @@ void shape1_1(int i, int j){
             }
         }
     }
+}
 }
 
 void shape1_2(int i, int j){
@@ -414,7 +429,7 @@ void shape7(int i, int j){
     shape7_4(i, j);
 }
 
-}
+
 
 void shape8_1(int i, int j) {
 
@@ -468,7 +483,7 @@ void shape8(int i, int j){
     shape8_3(i, j);
     shape8_4(i, j);
 
-
+}
 
 
 void shape9_1(int i, int j) {
@@ -585,7 +600,8 @@ void doesItBelong(int i, int j){
     shape9(i, j);
     shape10(i, j);
 
-public void checkNodes(int i, int j){
+}
+void checkNodes(int i, int j){
 
 	int flag = 0;
 
@@ -644,7 +660,7 @@ public void checkNodes(int i, int j){
 	}
 }
 
-int check(){
+void check(){
 
 
 
@@ -675,6 +691,7 @@ int z = 0;
     			xes[z] = i * rWidth + rWidth/2;
     			ys[z] = j * rLength + rLength/2;
     			z++;
+    			ROS_INFO("Adding point: [%d, %d]", xes[z], ys[z]);
     		}
     	}
     }
@@ -691,6 +708,10 @@ void createGrid(const nav_msgs::OccupancyGridConstPtr& msg_map){
 	int size_x = msg_map->info.width;
     int size_y = msg_map->info.height;
 
+	if ( (cv_map.rows != size_y) && (cv_map.cols != size_x)) {
+        cv_map = cv::Mat(size_y, size_x, CV_8U);
+    }
+
     map_resolution = msg_map->info.resolution;
 	tf::poseMsgToTF(msg_map->info.origin, map_transform);
 
@@ -699,7 +720,23 @@ void createGrid(const nav_msgs::OccupancyGridConstPtr& msg_map){
     unsigned char *cv_map_data = (unsigned char*) cv_map.data;
 
     //We have to flip around the y axis, y for image starts at the top and y for map at the bottom
+   
     int size_y_rev = size_y-1;
+    int ** pixels = new int*[baseWidth];
+   
+    for(int i=0; i<baseWidth; i++){
+		pixels[i] = new int[baseLength];
+	}
+
+    
+    for(int i=0; i<baseWidth; i++){
+		for(int j=0; j<baseLength; j++){
+			pixels[i][j] = (int)cv_map.data[i * baseWidth + j];
+		}
+	}
+		
+    /*
+    
 
     for (int y = size_y_rev; y >= 0; --y) {
 
@@ -726,17 +763,15 @@ void createGrid(const nav_msgs::OccupancyGridConstPtr& msg_map){
             }
         }
     }
-	map_avaiable = true;
-
+	
+*/
 	//int width = 544;
 	//int length = 576;
 	baseWidth = size_y_rev;
-	baseLength = idx_img_y + size_x - 1;
+	baseLength = size_x;
 
-    int pixels[baseWidth][baseLength] = cv_map_data;
+//int pixels[baseWidth][baseLength] = cv_map_data;
 
-    int rWidth = 4;
-    int rLength = 4;
     width = baseWidth/rWidth + 1;
     length = baseLength/rLength + 1;
 
@@ -769,7 +804,7 @@ void createGrid(const nav_msgs::OccupancyGridConstPtr& msg_map){
             }
 
             taken[i/rWidth][j/rLength] = flag;
-            ROS_INFO(flag);
+            ROS_INFO("%d", flag);
         }
         ROS_INFO("\n");
     }
@@ -786,7 +821,7 @@ class FindGoals{
 
 private:
 	MoveBaseClient ac;
-	
+	ros::NodeHandle n;
 
 public:
 	FindGoals(ros::NodeHandle &nh): ac("move_base", true), n(nh){
@@ -824,34 +859,45 @@ public:
 			ROS_INFO("The base failed to reach the initial pose for the approach");
 	}
 
-}
+};
 
 
-void chatterCallback(const std_msgs::String::ConstPtr& msg)
+void stopMap(const std_msgs::String::ConstPtr& msg)
 {
   cont = 0;
   ROS_INFO("I heard: [%s]", msg->data.c_str());
 }
 
-int main() {
+int main(int argc, char** argv) {
+	int a = 1;
 
 	//createGrid();
-    ros::init(argc, argv, "createGrid");
+    ros::init(argc, argv, "send_goals_dyn");
+    ROS_INFO("createGrid");
+    ROS_INFO("a: %d", a);
     ros::NodeHandle n;
-    FindGoals fg();
+    
+    ROS_INFO("NodeHandle");
+    FindGoals fg(n);
     map_sub = n.subscribe("map", 10, &createGrid);
     //ros::Subscriber sub = n.subscribe("nav_msgs/OccupancyGrid", 1000, chatterCallback);    
 int z = 0;
 
-ros::Subscriber sub = n.subscribe("stopMap", 1000, stopMap);
+ros::Subscriber sub = n.subscribe("stopMap", 1000, &stopMap);
+   
+	ROS_INFO("subscribed");
     while(ros::ok()){
+		
+	ROS_INFO("while...");
 		ros::spinOnce();
-		if(z < numNodes && bool){
+		
+		if(z < numNodes && cont){
 			fg.pxl_goal(xes[z], ys[z], 0);
 			z++;
 		} else {
 			break;
-		}	
+		}
+			
 		cont = 1;
     }
 
