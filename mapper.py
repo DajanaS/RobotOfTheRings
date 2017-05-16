@@ -62,6 +62,7 @@ class DetectionMapper():
 		global avgr
 		global flag
 		if flag == 0:
+			print("Averaging, brojach: ", brojach)
 			if brojach < 10:
 				avgx = avgx + detection.pose.position.x 
 				avgy = avgy + detection.pose.position.y
@@ -85,7 +86,8 @@ class DetectionMapper():
 					print("Best time is higher than 1")
 					tp.pose.position.z = -1
 					self.pub_avg_ring.publish(tp)
-					flag = 1
+					brojach = 0
+					#flag = 1
 					return
 
 				camera_model = PinholeCameraModel()
@@ -127,6 +129,7 @@ class DetectionMapper():
 					tp.pose.position.z = -1
 				self.pub_avg_ring.publish(tp)
 				flag = 1
+				brojach = 0
 				return
 			
 		if flag == 1:
@@ -280,7 +283,7 @@ class DetectionMapper():
 				else: 
 					print("Cant use radius")
 					#return
-				if (transformedPoint.pose.position.z > 0.56 or transformedPoint.pose.position.z < 0.48):
+				if (transformedPoint.pose.position.z > 0.56 or transformedPoint.pose.position.z < 0.43):
 					print("Wrong height")
 					return 
 				#if (transformedPoint2.pose.position.z > 0.5 or transformedPoint2.pose.position.z < 0.3): # visina
