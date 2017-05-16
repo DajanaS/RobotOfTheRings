@@ -27,6 +27,10 @@ brojach = 0
 avgx = 0
 avgy = 0
 avgr = 0
+minHeight = 0.48
+maxHeight = 0.56
+maxDistRing = 2.0
+
 flag = 1
 class DetectionMapper():
 
@@ -44,8 +48,11 @@ class DetectionMapper():
 
     def changeFlag_callback(self, msg):
 	global flag
-        flag = 0
-	print("Changing flag")
+        if flag == 1:
+		flag = 0
+	if flag == 0:
+		flag = 1
+	print("Changing flag: ", flag)
 
 
     def detections_callback(self, detection):
@@ -61,8 +68,10 @@ class DetectionMapper():
 		global avgy
 		global avgr
 		global flag
+		global maxHeight
+		global minHeight
+		global maxDistRing
 		if flag == 0:
-			print("Averaging, brojach: ", brojach)
 			if brojach < 10:
 				avgx = avgx + detection.pose.position.x 
 				avgy = avgy + detection.pose.position.y
@@ -86,21 +95,30 @@ class DetectionMapper():
 					print("Best time is higher than 1")
 					tp.pose.position.z = -1
 					self.pub_avg_ring.publish(tp)
-					brojach = 0
-					#flag = 1
+					flag = 1
 					return
 
 				camera_model = PinholeCameraModel()
 				camera_model.fromCameraInfo(camera_info)
 
-				p = Point(((avgx - camera_model.cx()) - camera_model.Tx()) / camera_model.fx(),((avgy - camera_model.cy()) - camera_model.Ty()) / camera_model.fy(), avgr)
-				lp = self.localize(detection.header, p, self.region_scope)
+				p = Point(((avgx - camera_model.cx()) - camera_model.Tx()) / camera_model.fx(),((avgy + avgr - camera_model.cy()) - camera_model.Ty()) / camera_model.fy(), 0)
+				#p2 = Point(((avgx - camera_model.cx()) - camera_model.Tx()) / camera_model.fx(),((avgy -avgr - camera_model.cy()) - camera_model.Ty()) / camera_model.fy(), 0)
+				avgx = avgy = avgr = 0
+				lp = self.localize(detection.header, p1, self.region_scope)
+				#lp2 = self.localize(detection.header, p2, self.region_scope)
 				self.tf.waitForTransform(detection.header.frame_id, "map", rospy.Time.now(), rospy.Duration(5.0))
 				mp = geometry_msgs.msg.PoseStamped()
 				mp.header.frame_id = detection.header.frame_id
 				mp.pose = lp.pose
 				mp.header.stamp = detection.header.stamp
-				tp = self.tf.transformPose("map", mp)
+				tp = self.tf.transformPose("map", mp1)
+
+				#mp2 = geometry_msgs.msg.PoseStamped()
+				#mp2.header.frame_id = detection.header.frame_id
+				#mp2.pose = lp2.pose
+				#mp2.header.stamp = detection.header.stamp
+				#tp2 = self.tf.transformPose("map", mp2)
+				
 
 				now2 = rospy.Time.now()
 				self.tf2.waitForTransform("base_link", "map", now2, rospy.Duration(5.0))
@@ -109,14 +127,17 @@ class DetectionMapper():
 				robot.header.frame_id = "base_link"
 				robot.pose.position.x = 0
 				robot.pose.position.y = 0
-				#robot.pose = localization1.pose
 				robot.header.stamp = now2
 				robotmap = self.tf2.transformPose("map", robot)
 
-				if lp.pose.position.x != 0:
-					dp = self.distance(robotmap, tp)
-					if dp > 1.5:
+
+				if lp1.pose.position.z != 0:
+					dp1 = self.distance(robotmap, tp)
+					if dp > maxDistRing:
 						print("Distance too big: ",dp)
+						tp.pose.position.z = -1
+					if tp.pose.position.z > maxHeight + 0.2 or tp.pose.position.z < minHeight:
+						print("Height is wrong: ", tp.pose.position.z)
 						tp.pose.position.z = -1
 					#if ((point1.y - point2.y)/2 > 0.7 or (point1.y - point2.y)/2 < 0.5):
 					#	tp.pose.position.z = -1
@@ -129,7 +150,6 @@ class DetectionMapper():
 					tp.pose.position.z = -1
 				self.pub_avg_ring.publish(tp)
 				flag = 1
-				brojach = 0
 				return
 			
 		if flag == 1:
@@ -144,11 +164,11 @@ class DetectionMapper():
 
 			g = detection.pose.position.x
 			#w = avgx-avgr
-			h = detection.pose.position.y+detection.pose.position.z + 4
+			h = detection.pose.position.y+detection.pose.position.z + 3
 
 			r = detection.pose.position.x
 			#w = avgx-avgr
-			t = detection.pose.position.y+detection.pose.position.z - 4
+			t = detection.pose.position.y+detection.pose.position.z - 3
 			#q = avgy
 		
 			camera_info = None
@@ -184,24 +204,17 @@ class DetectionMapper():
 			localization2 = self.localize(detection.header, point2, self.region_scope)
 			localization3 = self.localize(detection.header, point3, self.region_scope)
 			localization4 = self.localize(detection.header, point4, self.region_scope)
-			if not localization1:
+			if not (localization1 or localization2 or localization3 or localization):
+				print("Localization failed")
 				return
-
-			# calculate center
-			center = Point(localization1.pose.position.x, localization1.pose.position.y, localization1.pose.position.z)
 			now = detection.header.stamp
 			self.tf.waitForTransform(detection.header.frame_id, "map", now, rospy.Duration(5.0))
 
 			m = geometry_msgs.msg.PoseStamped()
 			m.header.frame_id = detection.header.frame_id
-			#m.pose.position.x = center.x
-			#m.pose.position.y = center.y
 			m.pose = localization1.pose
 			m.header.stamp = detection.header.stamp
 			transformedPoint1 = self.tf.transformPose("map", m)
-
-
-
 
 			m2 = geometry_msgs.msg.PoseStamped()
 			m2.header.frame_id = detection.header.frame_id
@@ -209,16 +222,11 @@ class DetectionMapper():
 			m2.header.stamp = detection.header.stamp
 			transformedPoint2 = self.tf.transformPose("map", m2)
 
-
-
-
 			m3 = geometry_msgs.msg.PoseStamped()
 			m3.header.frame_id = detection.header.frame_id
 			m3.pose = localization3.pose
 			m3.header.stamp = detection.header.stamp
 			transformedPoint3 = self.tf.transformPose("map", m3)
-
-
 
 			m4 = geometry_msgs.msg.PoseStamped()
 			m4.header.frame_id = detection.header.frame_id
@@ -235,30 +243,29 @@ class DetectionMapper():
 			robot.header.frame_id = "base_link"
 			robot.pose.position.x = 0
 			robot.pose.position.y = 0
-			#robot.pose = localization1.pose
 			robot.header.stamp = now2
 			robotmap = self.tf2.transformPose("map", robot)
 
-			#dist = self.distance(robotmap,transformedPoint)
-			transformedPoint = transformedPoint1
-			if localization1.pose.position.x != 0:
+			if localization1.pose.position.z != 0:
 				dist1 = self.distance(robotmap, transformedPoint1)
 			else:
 				dist1 = 100000
-			if localization2.pose.position.x != 0:
+			if localization2.pose.position.z != 0:
 				dist2 = self.distance(robotmap, transformedPoint2)
 			else:
 				dist2 = 100000
-			if localization3.pose.position.x != 0:
+			if localization3.pose.position.z != 0:
 				dist3 = self.distance(robotmap, transformedPoint3)
 			else:
 				dist3 = 100000
-			if localization4.pose.position.x != 0:
+			if localization4.pose.position.z != 0:
 				dist4 = self.distance(robotmap, transformedPoint4)
 			else:
 				dist4 = 100000
 			# find smallest distance to a point.
 			dist = dist1
+			transformedPoint = transformedPoint1
+
 			if dist2 < dist:
 				dist = dist2
 				transformedPoint = transformedPoint2
@@ -270,27 +277,22 @@ class DetectionMapper():
 				transformedPoint = transformedPoint4
 			
 			print("distance: ", dist)	
-			if( dist < 2 ):
+			if( dist < maxDistRing ):
 				radius = abs((transformedPoint1.pose.position.y - transformedPoint2.pose.position.y)/2)
 				print("radius: ", radius)
 				print("height: ", transformedPoint.pose.position.z)
-				#print("height p2: ", transformedPoint2.pose.position.z)
-				if((dist1 < 2 and dist2 < 2)):# or (dist1 >2 and dist2 > 2)):
+				if (dist1 < maxDistRing and dist2 < maxDistRing) or (dist1 >maxDistRing and dist2 > maxDistRing):
 					print("Checking radius")
 					if (radius > 0.7 or radius < 0.3):	
 						print("Wrong radius")
 						return
 				else: 
 					print("Cant use radius")
-					#return
-				if (transformedPoint.pose.position.z > 0.56 or transformedPoint.pose.position.z < 0.43):
+				if (transformedPoint.pose.position.z > maxHeight or transformedPoint.pose.position.z < minHeight):
 					print("Wrong height")
 					return 
-				#if (transformedPoint2.pose.position.z > 0.5 or transformedPoint2.pose.position.z < 0.3): # visina
-				#	return 
-				#self.pub.publish(transformedPoint)
 				print("start checking")
-				print(len(detected))
+				print("Detected rings: ", len(detected))
 				if len(detected) == 0:
 					beenDetected = False
 				else:
@@ -324,7 +326,7 @@ class DetectionMapper():
 					#if len(detected) == numFaces:
 					#	print("Sending shutdown")	
 			else:
-				print("Just zeros")
+				print("Too far away")
 
 
     def flush(self):
@@ -376,5 +378,6 @@ if __name__ == '__main__':
 			mapper.flush()
 			r.sleep()
 	except rospy.ROSInterruptException: pass
+
 
 
