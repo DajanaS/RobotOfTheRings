@@ -99,7 +99,6 @@ src_gray.convertTo(src_gray, -1, alpha, beta);
   {
       	Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
         ROS_INFO("Center - x: %i; y: %i", cvRound(circles[i][0]), cvRound(circles[i][1]));
-        ROS_INFO("Radius r: %f", circles[i][2]);
       	int radius = cvRound(circles[i][2]);
       	// circle center
       	circle(display, center, 3, Scalar(0,255,0), -1, 8, 0 );
@@ -138,7 +137,7 @@ int main(int argc, char** argv)
 {
   //namedWindow( "Hough Circle Transform Demo", CV_WINDOW_AUTOSIZE );
   //startWindowThread();
-  ros::init(argc, argv, "blob");
+  ros::init(argc, argv, "blob2");
   ros::NodeHandle n;
   ImageConverter ic(n);
   ros::Rate r(1);
@@ -146,5 +145,4 @@ int main(int argc, char** argv)
   //destroyWindow("Hough Circle Transform Demo");
   return 0;
 }
-
 

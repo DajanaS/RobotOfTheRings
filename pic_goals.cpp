@@ -46,11 +46,11 @@ int width = 0;
 int length = 0;
 int rWidth = 4;
 int rLength = 4;
-int gray = 205;
+int gray = 127;
 int unknown = -1;
 
 int black = 0;
-int white = 254;
+int white = 255;
 int yellow = 20;
 int green = 40;
 int orange = 60;
@@ -58,13 +58,16 @@ int purple = 80;
 int blue = 140;
 int red = 120;
 int forestGreen = 200;
-int square = 7;
+int square = 5;
 
 int numNodes = 0;
 int *xes;
 int *ys;
+int *xAr;
+int *yAr;
 bool cont = 1;
 int numGreen = 0;
+int breakingPoint = 5;
 //typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
 bool isAllowed(int i, int j){
@@ -749,9 +752,9 @@ void doesItBelong(int i, int j){
 void checkNodes(int i, int j){
 
 	int flag = 0;
-	cout<<"neutral"<<endl;
+	//cout<<"neutral"<<endl;
 	if(taken[i][j] == green){
-		cout<<"Green"<<endl;
+		//cout<<"Green"<<endl;
 		for (int m = i; m<i+square-1; m++){
 			for(int n = j; n<j+square-1; n++){
 				if(m!=i && n!=j){
@@ -767,10 +770,10 @@ void checkNodes(int i, int j){
 		}
 		taken[i][j] = forestGreen;
 		numNodes++;
-		cout<<"forestGreen"<<endl;
+		//cout<<"forestGreen"<<endl;
 		
 	} else if(taken[i][j] == orange){
-		cout<<"Orange"<<endl;
+		//cout<<"Orange"<<endl;
 		for (int m = i; m<i+square-1; m++){
 			for(int n = j; n<j+square-1; n++){
 				if(m!=i && n!=j){
@@ -787,10 +790,10 @@ void checkNodes(int i, int j){
 		if(!flag){
 				taken[i][j] = forestGreen;
 				numNodes++;
-				cout<<"forestGreen"<<endl;
+				//cout<<"forestGreen"<<endl;
 		}
 	} else if(taken[i][j] == yellow){
-		cout<<"Yeallow"<<endl;
+		//cout<<"Yeallow"<<endl;
 		for (int m = i; m<i+square-1; m++){
 			for(int n = j; n<j+square-1; n++){
 				if(m!=i && n!=j){
@@ -807,7 +810,7 @@ void checkNodes(int i, int j){
 		if(!flag){
 				taken[i][j] = forestGreen;
 				numNodes++;
-				cout<<"forestGreen"<<endl;
+				//cout<<"forestGreen"<<endl;
 		}
 	}
 }
@@ -817,11 +820,176 @@ double euclidean(double x1, double y1, double x2, double y2){
 	return d;
 }
 
+
+int getLeft(int i, int j){
+    int left = 0;
+    
+    if(taken[i][j-1]  == black){
+		left += 2;
+		//cout<<"Left 1 taken"<<endl;
+	} else if(taken[i][j-2] == black){
+		//cout<<"Left 2 taken"<<endl;
+		left  += 1;
+	}
+	return left;
+}
+
+int getRight(int i, int j){
+    int right = 0;
+    
+    if(taken[i][j+1]  == black){
+		//cout<<"Right 1 taken"<<endl;
+		right += 2;
+	}else if(taken[i][j+2] == black){
+		//cout<<"Right 2 taken"<<endl;
+		right  += 1;
+	}
+	return right;
+}
+
+int getUp(int i, int j){
+    
+    int up = 0;
+    
+    if(taken[i-1][j]  == black){
+		//cout<<"Up 1 taken"<<endl;
+		up += 2;
+	}else if(taken[i-2][j] == black){
+		//cout<<"Up 2 taken"<<endl;
+		up  += 1;
+	}
+	return up;
+}
+
+
+int getDown(int i, int j){
+    int down = 0;
+    
+    if(taken[i+1][j]  == black){
+		//cout<<"Down 1 taken"<<endl;
+		down += 2;
+	}else if(taken[i+2][j] == black){
+		//cout<<"Down 2 taken"<<endl;
+		down  += 1;
+	}
+	
+	return down;
+}
+
+
+void checkWall(int &i, int &j){
+	
+	
+	
+    int up = getUp(i, j);
+    int down = getDown(i, j);
+    int left = getLeft(i, j);
+    int right = getRight(i, j);
+	int total = 0;
+
+	total = left + right + up + down;
+	
+	if(up > down){
+		//cout<<"Moving down: "<<up<<" -- "<<down<<endl;
+		int dif = up - down;
+		if(dif != down){
+			//check out how it would be then
+			int leftT = getLeft(i+dif, j);
+			int rightT = getRight(i+dif, j);
+			int downT = getDown(i+dif, j);
+			int upT = getUp(i+dif, j);
+			int totalT = leftT + rightT + upT + downT;
+			
+			if(totalT <= total){
+			    if(upT + downT <= up + down){
+			        if(leftT + rightT <= left + right){
+			            //here we move// change the place of the node
+			            i += dif;
+			        }
+			    }
+			}
+			
+		}
+		
+	} else if(down > up){
+		//cout<<"Moving up: "<<up<<" -- "<<down<<endl;
+	    int dif = down - up;
+	    if(dif != up){
+	        int leftT = getLeft(i-dif, j);
+			int rightT = getRight(i-dif, j);
+			int downT = getDown(i-dif, j);
+			int upT = getUp(i-dif, j);
+			int totalT = leftT + rightT + upT + downT;
+			
+			if(totalT <= total){
+			    if(leftT + rightT <= left + right){
+			         //here we move// change the place of the node
+			         i -= dif;
+			    }
+			}
+	        
+	    }
+	}
+	
+	
+	up = getUp(i, j);
+    down = getDown(i, j);
+    left = getLeft(i, j);
+    right = getRight(i, j);
+	total = 0;
+
+	total = left + right + up + down;
+	
+	//check for left and right again
+	
+	if(left > right){
+		//cout<<"Moving to the right: "<<left<<" -- "<<right<<endl;
+		int dif = left - right;
+		if(dif != right){
+			int leftT = getLeft(i, j+dif);
+			int rightT = getRight(i, j+dif);
+			int downT = getDown(i, j+dif);
+			int upT = getUp(i, j+dif);
+			int totalT = leftT + rightT + upT + downT;
+			
+			if(totalT <= total){
+				if(upT + downT <= up + down){
+					//here we move// change the place of the node
+					j += dif;
+				}
+			}
+		}
+	} else if(right > left){
+		//cout<<"Moving to the left: "<<left<<" -- "<<right<<endl;
+		int dif = right - left;
+		if(dif != left){
+			int leftT = getLeft(i, j-dif);
+			int rightT = getRight(i, j-dif);
+			int downT = getDown(i, j-dif);
+			int upT = getUp(i, j-dif);
+			int totalT = leftT + rightT + upT + downT;
+			
+			if(totalT <= total){
+				if(upT + downT <= up + down){
+					//here we move// change the place of the node
+					j -= dif;
+				}
+			}
+		}
+	}
+	/*
+	int * ij = new int[2];
+	ij[0] = i;
+	ij[1] = j;
+	return ij;
+	*/
+}
+
 void check(){
 
-cout<<"Before does it belong"<<endl;
-cout<<"Width: "<<width<<endl;
-cout<<"Length: "<<length<<endl;
+//cout<<"Before does it be	long"<<endl;
+//cout<<"Width: "<<width<<endl;
+//cout<<"Length: "<<length<<endl;
 
     for(int i=0; i<width; i++){
         for(int j=0; j<length; j++){
@@ -832,44 +1000,105 @@ cout<<"Length: "<<length<<endl;
         }
        // cout<<endl;
     }
+  /*
+    int flag = 0;
+    for(int i = 0;  i< width; i++){
+		flag = 0;
+		for(int j = 0; j<length; j++){
+			//cout<<taken[i][j]<<" ";
+			if(taken[i][j] != gray){
+				flag = 1;
+			}
+		}
+		if(flag){
+			for(int j=0; j<length; j++){
+				if(taken[i][j] == black){
+					cout<<taken[i][j]<<" ";
+				} else if( taken[i][j] != white && taken[i][j] != gray){
+					cout<<taken[i][j]<<" ";
+				}else {
+					cout<<"_ ";
+				}
+			}
+			cout<<" "<<endl;
+			cout<<" "<<endl;
+		}
+		
+	}
+	* */
+    
 
-cout<<"After does it belong"<<endl;
-cout<<"width:"<<width<<endl;
-cout<<"length:"<<length<<endl;
+//cout<<"After does it belong"<<endl;
+//cout<<"width:"<<width<<endl;
+//cout<<"length:"<<length<<endl;
     for(int i=0; i<width; i++){
         for(int j=0; j<length; j++){
-			cout<<"["<<i<<"]["<<j<<"]"<<taken[i][j]<<endl;
+			//cout<<"["<<i<<"]["<<j<<"]"<<taken[i][j]<<endl;
             if(taken[i][j] != black && taken[i][j] != white && taken[i][j] != gray){
                 //cout<<"["<<i<<"]["<<j<<"]: "<<taken[i][j]<<endl;
                 checkNodes(i, j);
-                cout<<"checking nodes"<<endl;
+                //cout<<"checking nodes"<<endl;
             }
         }
     }
     
-    cout<<"after check nodes"<<endl;
+    //cout<<"after check nodes"<<endl;
 
 xes = new int[numNodes];
 ys = new int[numNodes];
+
+int *xtemp;
+int *ytemp;
+
 int z = 0;
+
     for(int i=0; i<width; i++){
     	for(int j=0; j<length; j++){
+			//ROS_INFO("Xes and Ys");
     		if(taken[i][j] == forestGreen){
-    			double x = i * rWidth + rWidth/2;
-    			double y = j * rLength + rLength/2;
+				//cout<<"Checking point: ["<<i<<"] ["<<j<<"]"<<endl;
+    			int a = i;
+    			int b = j;
     			
+    			checkWall(a, b);
+    			double x = a * rWidth + rWidth/2;
+    			double y = b * rLength + rLength/2;
+    			///int * ij = new int[2];
+    			
+    			//x = ij[0];
+    			//y = ij[1];
+    			//cout<<"Before adding: ["<<a<<"] ["<<b<<"]"<<endl;
+    			//cout<<"Before Euclidean: ["<<i<<"] ["<<j<<"]"<<"-> ["<<x<<"] ["<<y<<"]"<<endl;
     			if(z == 0){
+					
 					xes[z] = x;
 					ys[z] = y;
+					//cout<<"Adding point: ["<<xes[z]<<"] ["<<ys[z]<<"]"<<endl;
 					z++;
+					
 				} else {
-					if(euclidean(x, y, xes[z-1], ys[z-1]) > 10){
-						cout<<"Euclidean: "<<euclidean(x, y, xes[z-1], ys[z-1])<<endl;
+					
+					//ROS_INFO("Euclidean: %.2f", euclidean(x, y, xes[z-1], ys[z-1]));
+					int isFar = 0;
+					for(int k=0;k<z;k++){
+						if(euclidean(x, y, xes[k], ys[k]) <= breakingPoint){
+							isFar = 1;
+						}
+					}
+					
+					
+					if(!isFar){
+						//cout<<"Euclidean: "<<euclidean(x, y, xes[z-1], ys[z-1])<<endl;
+						
+						//ROS_INFO("Euclidean: %.2f", euclidean(x, y, xes[z-1], ys[z-1]));
+						//ROS_INFO("Adding point: [%d, %d]", xes[z], ys[z]);
 						xes[z] = x;
 						ys[z] = y;
+						
 						z++;
 					}
 				}
+				
     			
     		numNodes = z;	
     			//cout<<"Hooray!"<<endl;
@@ -877,7 +1106,85 @@ int z = 0;
     		}
     	}
     }
-cout<<"after xes and ys"<<endl;
+    xtemp = new int[numNodes];
+	ytemp = new int[numNodes];
+	xAr = new int[numNodes];
+	yAr = new int[numNodes];
+	
+    
+    for(int i =0; i<numNodes; i++){
+		
+		xtemp[i] = xes[i];
+		ytemp[i] = ys[i];
+	}
+	cout<<"Num nodes: "<<numNodes<<endl;
+	
+	
+	for(int i=0; i<numNodes; i++){
+		xes[i] = xtemp[numNodes-i-1];
+		ys[i] = ytemp[numNodes-i-1];
+		//cout<<"Adding point: ["<<xes[i]<<"] ["<<ys[i]<<"] <-------------------"<<endl;
+		//cout<<"Adding point: ["<<xes[i]<<"] ["<<ys[i]<<"] <-------------------"<<endl;
+	}
+	//cout<<"---------------------------------------------------------------------"<<endl;
+    //cout<<"Adding point: ["<<xes[0]<<"] ["<<ys[0]<<"] <-------------------"<<endl;
+    xAr[0] = xes[0];
+    yAr[0] = ys[0];
+    //cout<<"Adding point: ["<<xes[0]<<"] ["<<ys[0]<<"] <-------------------"<<endl;
+    //cout<<"Adding point: ["<<xAr[0]<<"] ["<<yAr[0]<<"] <-------------------"<<endl;
+    float min = 10000;
+    int counter = 0;
+    int xMin = 1;
+    int yMin = 1;
+    //cout<<"Adding point: ["<<xes[1]<<"] ["<<ys[1]<<"] <-------------------"<<endl;
+    
+    for(int k=0; k<numNodes-1; k++){
+		//cout<<"Checking point: ["<<xAr[k]<<"] ["<<yAr[k]<<"]"<<endl;
+		for(int u=1; u<numNodes; u++){
+			//cout<<"*************************"<<endl;
+			//cout<<"Xes and Ys: ["<<xMin<<"] ["<<yMin<<"]"<<endl;
+			//cout<<"--------: ["<<xes[xMin]<<"] ["<<ys[yMin]<<"]"<<endl;
+			if(xes[u] != -1 || ys[u] != -1){
+				//cout<<"mini mini me: ["<<xMin<<"] ["<<yMin<<"] <-------------------"<<endl;
+				float euc = euclidean(xAr[k], yAr[k], xes[u], ys[u]);
+				//cout<<"Euclid: "<<euc<<endl;
+				//cout<<"Mini Mouse: "<<min<<endl;
+				if(euc < min){
+					//cout<<"Xes and Ys: ["<<xMin<<"] ["<<yMin<<"]"<<endl;
+					//cout<<"++++++++++: ["<<xes[xMin]<<"] ["<<ys[yMin]<<"]"<<endl;
+					
+					min = euc;
+					xMin = u;
+					yMin = u;
+					//cout<<"Xes and Ys: ["<<xMin<<"] ["<<yMin<<"]"<<endl;
+					//cout<<"++++++++++: ["<<xes[xMin]<<"] ["<<ys[yMin]<<"]"<<endl;
+					//cout<<"#################### "<<endl;
+						
+				}
+			}
+		}
+					
+		//cout<<"---------------------------------------------------------------------"<<endl;
+				counter++;
+				xAr[k+1] = xes[xMin];
+				yAr[k+1] = ys[yMin];
+				//cout<<"Adding point: ["<<xAr[k+1]<<"] ["<<yAr[k+1]<<"] <-------------------"<<endl;
+				//cout<<"Adding point: ["<<k+1<<"] ["<<k+1<<"] <-------------------"<<endl;
+				xes[xMin] = -1;
+				ys[yMin] = -1;
+				min = 10000;
+			
+			
+		//cout<<"---------------------------------------------------------------------"<<endl;
+		
+	}
+    //cout<<"Count: "<<counter<<endl;
+    //rearange the positions
+    for(int i=0; i<numNodes; i++){
+		cout<<"Adding point: ["<<xAr[i]<<"] ["<<yAr[i]<<"] <-------------------"<<endl;
+	}
+    
+//cout<<"after xes and ys"<<endl;
 }
 
 Mat cv_map;
@@ -885,7 +1192,7 @@ Mat cv_map;
 void createGrid(){
  //int * occup = msg->data.c_str(); 
 
-	cout<<"Create grid"<<endl;
+	//cout<<"Create grid"<<endl;
 	/*Mat image;
 	image = imread("comp2_map_2.pgm", CV_LOAD_IMAGE_COLOR);
 	if(! image.data){
@@ -896,6 +1203,7 @@ cout<<"Loaded map"<<endl;
 */
     //int ** pixels = new int*[baseWidth];
     Mat pixels = cv_map;
+    
     
  //   namedWindow("Somethin", CV_WINDOW_AUTOSIZE);
     //cvtColor(image, pixels, CV_BGR2GRAY);
@@ -912,7 +1220,7 @@ cout<<"Loaded map"<<endl;
     //int * m = new int[width/rWidth];
     //int * n = new int[width/rWidth];
     //int counter = 0;
-    cout<<"Initialising taken"<<endl;
+    //cout<<"Initialising taken"<<endl;
     taken = new int*[width];
     
     for(int i = 0; i < width; i++) {
@@ -921,7 +1229,7 @@ cout<<"Loaded map"<<endl;
     }
 
 
-cout<<"Before taken"<<endl;
+//cout<<"Before taken"<<endl;
     for(int i=0; i<baseWidth; i+=rWidth){
         for(int j=0; j<baseLength; j+=rLength){
             int flag = white;
@@ -944,13 +1252,37 @@ cout<<"Before taken"<<endl;
 				taken[i/rWidth][j/rLength] = flag;
         }
     }
-cout<<"Filed taken, check is next."<<endl;
+/*  
+   int flag = 0;
+    for(int i = 0;  i< width; i++){
+		flag = 0;
+		for(int j = 0; j<length; j++){
+			//cout<<taken[i][j]<<" ";
+			if(taken[i][j] != gray){
+				flag = 1;
+			}
+		}
+		if(flag){
+			for(int j=0; j<length; j++){
+				if(taken[i][j] == black){
+					cout<<taken[i][j]<<" ";
+				} else {
+					cout<<"_ ";
+				}
+			}
+			cout<<" "<<endl;
+			cout<<" "<<endl;
+		}
+		
+	}
+	
+	*/
+	
+//cout<<"Filed taken, check is next."<<endl;
     check();
-    
-  
-    
+
     for(int i=0; i<numNodes; i++){
-		cout<<"Pixels: "<< xes[i] <<" "<< ys[i]<< endl;
+		//cout<<"Pixels: "<< xes[i] <<" "<< ys[i]<< endl;
 	}
 
     //ROS_INFO(taken);
@@ -1012,7 +1344,7 @@ void mapCallback(const nav_msgs::OccupancyGridConstPtr& msg_map) {
             case 100:
                 cv_map_data[idx] = 0;
                 break;
-            }
+            } 
         }
     }
 	ROS_INFO("Map avaiable");
@@ -1036,7 +1368,7 @@ public:
 		
 		cmd_vel_pub = n.advertise<geometry_msgs::Twist>("/cmd_vel_mux/input/navi", 1000);
 		moving = false;
-		move_sub = n.subscribe<std_msgs::String>("new_ring", 100, &GoalSender::stop_goals, this);
+		move_sub = n.subscribe<geometry_msgs::PoseStamped>("new_ring", 100, &GoalSender::stop_goals, this);
 		move_sub2 = n.subscribe<std_msgs::String>("go_on", 100, &GoalSender::new_goals, this);
 
 		while(!ac.waitForServer(ros::Duration(1.0))){
@@ -1047,7 +1379,7 @@ public:
 	~GoalSender()
 	{
 	}
-	void stop_goals(const std_msgs::String::ConstPtr & msg)
+	void stop_goals(const geometry_msgs::PoseStamped::ConstPtr & msg)
 	{
 		moving = false;
 	}
@@ -1078,19 +1410,23 @@ public:
 	{
 		ROS_INFO("Got goal and sending it now");
 		ROS_INFO("x: %f, y: %f", goal.target_pose.pose.position.x, goal.target_pose.pose.position.y);
+		
 		ac.sendGoal(goal);
 		ROS_INFO("Waiting for result");
 		ac.waitForResult();
 		if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
-			ROS_INFO("Reached initial pose of approache");
+			ROS_INFO("Reached initial pose of approach");
 		else
 			ROS_INFO("The base failed to reach the goal");
+			
+	
 	}
 	
-	void turn(int time)
+	void turn()
 	{
+		int time = 250;
 		geometry_msgs::Twist base_cmd;
-		base_cmd.linear.z = 0.2;
+		base_cmd.angular.z = 0.6;
 		ros::Rate r(20);
 		ROS_INFO("Moving straight");
 		for(int i = 0; i < time; ++i)
@@ -1098,6 +1434,7 @@ public:
 			cmd_vel_pub.publish(base_cmd);
 			r.sleep(); 
 		}
+		ROS_INFO("Finished turning");
 	}
 };
 
@@ -1107,6 +1444,8 @@ int main(){
 	cout<<"Size: "<<numNodes<<endl;
 }*/
 
+
+
 int main(int argc, char** argv) {
 
     ros::init(argc, argv, "pic_goals");
@@ -1115,16 +1454,17 @@ int main(int argc, char** argv) {
 
     map_sub = n.subscribe("map", 10, &mapCallback);
 
-int z = 0;
+int z = 5;
     ROS_INFO("Start spinning");
     while(ros::ok()) {
 		if(map_avaiable){createGrid(); map_avaiable = false; sender.moving = true;}
 		if(sender.moving)
 		{
-			sender.pxl_goal(xes[z], ys[z], 0);
+			sender.pxl_goal(xAr[z], yAr[z], 0);
 			z++;
-			sender.turn(20);
-			break;
+			if(z == numNodes) break;
+			sender.turn();
+			//break;
 		}
         ros::spinOnce();
     }

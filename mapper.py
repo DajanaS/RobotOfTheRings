@@ -27,7 +27,7 @@ brojach = 0
 avgx = 0
 avgy = 0
 avgr = 0
-minHeight = 0.48
+minHeight = 0.45
 maxHeight = 0.56
 maxDistRing = 2.0
 
@@ -281,13 +281,13 @@ class DetectionMapper():
 				radius = abs((transformedPoint1.pose.position.y - transformedPoint2.pose.position.y)/2)
 				print("radius: ", radius)
 				print("height: ", transformedPoint.pose.position.z)
-				if (dist1 < maxDistRing and dist2 < maxDistRing) or (dist1 >maxDistRing and dist2 > maxDistRing):
-					print("Checking radius")
-					if (radius > 0.7 or radius < 0.3):	
-						print("Wrong radius")
-						return
-				else: 
-					print("Cant use radius")
+				#if (dist1 < maxDistRing and dist2 < maxDistRing) or (dist1 >maxDistRing and dist2 > maxDistRing):
+				#	print("Checking radius")
+				#	if (radius > 0.7 or radius < 0.3):	
+				#		print("Wrong radius")
+				#		return
+				#else: 
+				#	print("Cant use radius")
 				if (transformedPoint.pose.position.z > maxHeight or transformedPoint.pose.position.z < minHeight):
 					print("Wrong height")
 					return 
@@ -378,6 +378,7 @@ if __name__ == '__main__':
 			mapper.flush()
 			r.sleep()
 	except rospy.ROSInterruptException: pass
+
 
 
 
