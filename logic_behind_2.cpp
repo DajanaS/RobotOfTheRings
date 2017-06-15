@@ -59,7 +59,17 @@ int xFace = 0;
 int yFace = 0;
 int recognisedFace = 0;
 int personFlag = 0;
-string name = "";
+string nameP = "";
+string ringP = "";
+int itsRing = 0;
+int itsFace = 0;
+move_base_msgs::MoveBaseGoal positionFace;
+int detectedRing = 0;
+int pickedRing = 0;
+int detectedCylinder = 0;
+string cylinderColour = "";
+geometry_msgs::PoseStamped coordinates;
+move_base_msgs::MoveBaseGoal cylinderPosition;
 
 class Person{
 
@@ -72,20 +82,19 @@ public:
 	std::string name;
     int id;
     int isLying;
-    float x;
-    float y;
+    //float x;
+    //float y;
+    move_base_msgs::MoveBaseGoal position;
     int numQuestions;
     int yesNoAnswers;
 
 	Person(){}
 	
-    Person(std::string name, int age, int height, int gender, float x, float y, int id){
+    Person(std::string name, int age, int height, int gender, int id){
         this->name = name;
         this->age = age;
         this->height = height;
         this->gender = gender;
-        this->x = x;
-        this->y = y;
         this->id = id;
         if(gender == MALE){
             isLying = NOTLYING;
@@ -98,9 +107,8 @@ public:
         }
     }
 
-    void setPosition(float x, float y){
-        this->x = x;
-        this->y = y;
+    void setPosition(move_base_msgs::MoveBaseGoal pos){
+        position = pos;
     }
 
     void setLying(bool ly){
@@ -121,17 +129,22 @@ class Cylinder{
 public:
 	
 	string colour;
-    float x;
-    float y;
+    //float x;
+    //float y;
+    move_base_msgs::MoveBaseGoal position;
     int isTheOne;
 	
 	Cylinder(){}
 
     Cylinder(string c, float xx, float yy){
         colour = c;
-        x = xx;
-        y = yy;
+        position.target_pose.pose.position.x = xx;
+        position.target_pose.pose.position.y = yy;
         isTheOne = 0;
+    }
+    
+    void setPosition(move_base_msgs::MoveBaseGoal pos){
+        position = pos;
     }
 };
 
@@ -141,16 +154,17 @@ class Ring{
 public:
 
 	string colour;
-    float x;
-    float y;
+    //float x;
+    //float y;
+    move_base_msgs::MoveBaseGoal position;
     int isTheOne;
 
 	Ring(){}
 	
     Ring(string c, float xx, float yy){
         colour = c;
-        x = xx;
-        y = yy;
+        position.target_pose.pose.position.x = xx;
+        position.target_pose.pose.position.y = yy;
         isTheOne = 0;
     }
 };
@@ -235,9 +249,11 @@ private:
     move_base_msgs::MoveBaseGoal pBase, pMap;
     //tf::Transform map_transform;
     tf::TransformListener listener;
+    
 	
 public:
 	bool moving;
+	ros::Publisher send;
 	GoalSender(ros::NodeHandle &nh): ac("move_base", true), n(nh)
 	{		
 		ROS_INFO("Start initializing approach");
@@ -245,7 +261,9 @@ public:
 		cmd_vel_pub = n.advertise<geometry_msgs::Twist>("/cmd_vel_mux/input/navi", 1000);
 		moving = false;
 		move_sub = n.subscribe<geometry_msgs::PoseStamped>("new_ring", 100, &GoalSender::stop_goals, this);
-		move_sub2 = n.subscribe<std_msgs::String>("go_on", 100, &GoalSender::new_goals, this);
+		//move_sub2 = n.subscribe<std_msgs::String>("go_on", 100, &GoalSender::new_goals, this);
+		send = n.advertise<std_msgs::String>("go_on", 10);
+
 
 		while(!ac.waitForServer(ros::Duration(1.0))){
 			ROS_INFO("Waiting for the move_base action server to come up");
@@ -315,28 +333,55 @@ public:
 	
 		
 void faceCallback(const move_base_msgs::MoveBaseGoal& goal){
-	xFace = goal.target_pose.pose.position.x;
-	yFace = goal.target_pose.pose.position.y;
-	send_goal(goal);
+	//xFace = goal.target_pose.pose.position.x;
+	//yFace = goal.target_pose.pose.position.y;
+	cout<<"Detected a face..."<<endl;
+	positionFace = goal;
 	goToFaceFlag = 1;
 }
 
+void ringDetectedCallback(const geometry_msgs::PoseStamped::ConstPtr & msg){
+	//xFace = goal.target_pose.pose.position.x;
+	//yFace = goal.target_pose.pose.position.y;
+	cout<<"Detected a ring..."<<endl;
+	coordinates = *msg;
+	//positionFace = goal;
+	detectedRing = 1;
+}
+
 void personCallback(const std_msgs::String::ConstPtr& msg){
-	name = msg->data.c_str();
+	nameP = msg->data.c_str();
+	cout<<"Recognised face: "<<nameP<<endl;
 	personFlag = 1;
 }
+
+void ringPickedCallback(const std_msgs::String::ConstPtr& msg){
+	//nameP = msg->data.c_str();
+	cout<<"Picked up ring..."<<endl;
+	ringP = msg->data.c_str();
+	pickedRing = 1;
+}
+
+void cylinderDetectedCallback(const move_base_msgs::MoveBaseGoal& goal){
+	
+	cylinderPosition = goal;
+	detectedCylinder = 1;
+	cylinderColour = goal.target_pose.header.frame_id;
+	cout<<"Detected a cylinder..."<<cylinderColour<<endl;
+}
+
 
 void sleepok(int t, ros::NodeHandle &nh)
  {
    if (nh.ok()) sleep(t);
  }
 
-    void ask(string question){
+void ask(string question){
      //string fullSentence = name + ", " + question;
      cout<<question<<endl;
      sc.say(question);
      sleepok(2, n);
-	}
+}
 //(int)pixels.at<uchar>(l, w);
 int checkFree(int x, int y){
 	Mat pixels = cv_map;
@@ -380,47 +425,19 @@ void go2meters(int i){
     int x = 0;
     int y = 0;
 
-	//int val = (int)pixels.at<uchar>(l, w);
-	//cv_map
-	/*
-	if(checkFree(current_x + dist, current_y)){
-		x = current_x + dist;
-		y = current_y;
-	} else if(checkFree(current_x - dist, current_y)){
-		x = current_x - dist;
-		y = current_y;
-	} else if(checkFree(current_x, current_y + dist)){
-		x = current_x;
-		y = current_y + dist;
-	} else if(checkFree(current_x - dist, current_y)){
-		x = current_x;
-		y = current_y - dist;
-	} else if(checkFree(current_x + dist, current_y + dist)){
-		x = current_x + dist;
-		y = current_y + dist;
-	} else if(checkFree(current_x + dist, current_y - dist)){
-		x = current_x + dist;
-		y = current_y - dist;
-	} else if(checkFree(current_x - dist, current_y - dist)){
-		x = current_x - dist;
-		y = current_y - dist;
-	} else if(checkFree(current_x - dist, current_y + dist)){
-		x = current_x - dist;
-		y = current_y + dist;
-	}
-	* cout<<"x: "<<x<<", y: "<<y<<endl;
-  */
-	
   
      //pxl_goal(x, y, 0);
      int id = 0;
      if(i == 0) id = 1;
      else if(i == 6) id = 5;
      else id = i + 1;
-     pxl_goal(onField[id].x, onField[id].y, 0);
+     cout<<"I am going to see "<<onField[id].name<<endl;
+     //pxl_goal(onField[id].x, onField[id].y, 0);
+     send_goal(onField[id].position);
      cout<<"Hello "<<onField[id].name<<endl;
      ask("Hello " + onField[id].name);
-     pxl_goal(current_x, current_y, 0); 
+     // pxl_goal(current_x, current_y, 0); 
+     send_goal(onField[i].position);
 }
 
 double euclidean(double x1, double y1, double x2, double y2){
@@ -434,6 +451,9 @@ void getReply(const std_msgs::String::ConstPtr& msg)
   std::istringstream iss(reply);
   std::vector<std::string> results((std::istream_iterator<std::string>(iss)),
                                  std::istream_iterator<std::string>());
+  
+  cout<<"Did you say "<<reply<<endl;
+  
   if(results.size() > 1){
     ask("I am bringing the " + results[1] + " ring");
     flag = 1;
@@ -696,17 +716,23 @@ std::string maleWhich(string name){
 
 int main(int argc, char **argv) {
 	
-	ros::init(argc, argv, "sound_play_test");
+	ros::init(argc, argv, "logic");
 	    
     ros::NodeHandle n;
     
     GoalSender sender(n);
     ros::Subscriber sub1 = n.subscribe("speachFiltered", 1000, &GoalSender::getReply, &sender);
     ros::Subscriber person_sub = n.subscribe("person", 1000, &GoalSender::personCallback, &sender);
+    ros::Subscriber ring_sub = n.subscribe("new_ring", 1000, &GoalSender::ringDetectedCallback, &sender);
+    ros::Subscriber ring2_sub = n.subscribe("lets_go", 1000, &GoalSender::ringPickedCallback, &sender);
+	ros::Subscriber cyl_sub = n.subscribe("cylinder", 1000, &GoalSender::cylinderDetectedCallback, &sender);
 	map_sub =  n.subscribe("map", 10, &mapCallback);
 	face_sub = n.subscribe("facesPos", 100, &GoalSender::faceCallback, &sender);
+	
 
+	ros::Publisher readyToPickUp = n.advertise<geometry_msgs::PoseStamped >("start_approach", 100);
 	ros::Publisher readyToRecognise = n.advertise<std_msgs::String>("recognize", 100);
+	ros::Publisher cancelDetection = n.advertise<std_msgs::String>("cancelDetection", 100);
 
 	while(ros::ok()) {
                 
@@ -715,19 +741,22 @@ int main(int argc, char **argv) {
                 if(mapFlag == 0) break;
      }
     int i = 0;
-    Person p1("Peter", 25, 182, MALE, 0, 0, i++);
-    Person p2("Tina", 33, 171, FEMALE, 0, 0, i++);
-    Person p3("Forrest", 42, 183, MALE, 0, 0, i++);
-    Person p4("Scarlett", 31, 160, FEMALE, 0, 0, i++);
-    Person p5("Tesla", 45, 188, MALE, 0, 0, i++);
-    Person p6("Adele", 29, 175, FEMALE, 0, 0, i++);
-    Person p7("Harry", 18, 165, MALE, 0, 0, i++);
-    Person p8("Ellen", 59, 170, FEMALE, 0, 0, i++);
-    Person p9("Lindsey", 32, 178, FEMALE, 0, 0, i++);
-    Person p10("Albert", 71, 180, MALE, 0, 0, i++);
-    Person p11("Ilka", 26, 172, FEMALE, 0, 0, i++);
-    Person p12("Elvis", 34, 181, MALE, 0, 0, i++);
+    Person p1("Peter", 25, 182, MALE, i++);
+    Person p2("Tina", 33, 171, FEMALE, i++);
+    Person p3("Forrest", 42, 183, MALE, i++);
+    Person p4("Scarlett", 31, 160, FEMALE, i++);
+    Person p5("Tesla", 45, 188, MALE, i++);
+    Person p6("Adele", 29, 175, FEMALE, i++);
+    Person p7("Harry", 18, 165, MALE, i++);
+    Person p8("Ellen", 59, 170, FEMALE, i++);
+    Person p9("Lindsey", 32, 178, FEMALE, i++);
+    Person p10("Albert", 71, 180, MALE, i++);
+    Person p11("Ilka", 26, 172, FEMALE, i++);
+    Person p12("Elvis", 34, 181, MALE, i++);
     cout<<"i: "<<i<<endl;
+    
+    Cylinder *towers;
+    towers = new Cylinder[4];
     
     Person *allThePeople = new Person[12];
     allThePeople[0] = p1;
@@ -743,92 +772,113 @@ int main(int argc, char **argv) {
     allThePeople[10] = p11;
     allThePeople[11] = p12;
 
-/*
 
-	p9.x = 326;
-	p9.y = 191;
-	
-	//p10.x = 300;
-	//p10.y = 211;
-	
-	p4.x = 352;
-	p4.y = 180;
-	
-	p11.x = 303;
-	p11.y = 208;
-	
-	p7.x = 305;
-	p7.y = 194;
-	
-	p12.x = 322;
-	p12.y = 182;
-	
-	p5.x = 339;
-	p5.y = 177;
-
-	onField[0] = p5;
-	onField[1] = p4;
-	onField[2] = p11;
-	onField[3] = p7;
-	onField[4] = p12;
-	onField[5] = p9;
-	
-	//cout<<"X: "<<onField[0].x<<endl;
-    //cout<<"Y: "<<onField[0].y<<endl;
-	
-	
-*/
-
-int k = 0;
-while(k<6){
-	cout<<"Finding face number "<<k+1<<endl;
+int f = 0;
+int r = 0;
+int j=0;
+int c = 0;
+while(f < 6 || r < 4 || c < 4){
+//while(f < 6){
+	cout<<"Finding face number "<<f+1<<endl;
+	cout<<"Finding ring number "<<r+1<<endl;
+	cout<<"Finding cylinder number "<<c+1<<endl;
 	while(ros::ok()){
-		if(goToFaceFlag == 1) break;
+		if(goToFaceFlag == 1 || detectedRing == 1 || detectedCylinder == 1) break;
 		ros::spinOnce();
 	}
-	goToFaceFlag = 0;
-	std_msgs::String msg;
-	msg.data = "ready";
-	readyToRecognise.publish(msg);
-	while(ros::ok()){
-		if(personFlag == 1)break;
-		ros::spinOnce();
-	}
-	int j=0;
-	for(int i=0; i<12; i++){
-		if(allThePeople[i].name == name){
-			onField[j] = allThePeople[i];
-			j++;
+	
+	if(goToFaceFlag == 1){
+		//deal with people
+		sender.send_goal(positionFace);
+		goToFaceFlag = 0;
+		
+		std_msgs::String msg;
+		msg.data = "ready";
+		readyToRecognise.publish(msg);
+		//personFlag = 0;
+		cout<<"personFlag: "<<personFlag<<endl;
+		while(ros::ok()){
+			//cout<<"waiting for a new person... "<<personFlag<<endl;
+			if(personFlag == 1) break;
+			ros::spinOnce();
+		}
+		personFlag = 0;
+		
+		//check if name is valid
+		cout<<"I got the following input 	: "<<nameP<<endl;
+		if(nameP == "Unknown"){
+			ROS_INFO("The detection was unknown. Canceling last detection and moving on.");
+			msg.data = "cancel";
+			cancelDetection.publish(msg);
+		} else {
+			cout<<"The known face was: "<<nameP<<endl;
+			for(int i=0; i<12; i++){
+				if(allThePeople[i].name == nameP){
+					//ROS_INFO("The detected face was: " + name);
+					cout<<"The detected face was: "<<allThePeople[i].name <<endl;
+					onField[j] = allThePeople[i];
+					//onField[j].position = positionFace;
+					onField[j].setPosition(positionFace);
+					j++;
+					f++;
+				}
+			}
+		
+		}
+	} else if(detectedRing){
+		detectedRing = 0;
+		//deal with rings here
+		readyToPickUp.publish(coordinates);
+		while(ros::ok()){
+			//cout<<"waiting for a new person... "<<personFlag<<endl;
+			if(pickedRing == 1) break;
+			ros::spinOnce();
+		}
+		pickedRing = 0;
+		//wait for the ring to be picked up
+		if(ringP == "good"){
+			cout<<"I have picked up the ring."<<endl;
+			r++;
+		} else if(ringP == "bad"){
+			cout<<"I have NOT picked up the ring."<<endl;
+		}
+		
+	}else if(detectedCylinder){
+		detectedCylinder = 0;
+		sender.send_goal(cylinderPosition);
+		c++;
+		for(int i=0; i<4; i++){
+			if(towers[i].colour == cylinderColour){
+					towers[i].setPosition(cylinderPosition);
+				
+			}
 		}
 	}
-	k++;
+	
+	if(f < 6 || r < 4 || c < 4) {
+		std_msgs::String msg;
+		msg.data = "Send goals";
+		ROS_INFO("Asking for new goals");
+		sender.send.publish(msg);
 }
-	
-	//get which face it is
-	
-	//publish that we are ready for recoginiton
-	
-	//sub to the topic in order to get the recognised face
+}
 
-    Cylinder *towers;
-    towers = new Cylinder[4];
-    Cylinder c1("green", 278, 184);
-    Cylinder c2("blue", 273, 247);
-    Cylinder c3("yellow", 355, 179);
-    Cylinder c4("red", 332, 170);
+
+
+    /*
+    Cylinder c1("green", 1.85, 2.82);
+    Cylinder c2("blue", 3.25, 2.7);
+    Cylinder c3("yellow", 2.38, -0.65);
+    Cylinder c4("red", 3.32, 1.42);
     towers[0] = c1;
     towers[1] = c2;
     towers[2] = c3;
     towers[3] = c4;
+    * */
 	
     Ring *rings;
     rings = new Ring[4];
 
-    //fill persons on field up here
-    
-    //get indeces
-
-    // we take the first man we can find, and go ask him
     string name = "";
     int idMan = 0;
 
@@ -841,12 +891,13 @@ while(k<6){
         }
     }
 	cout<<onField[idMan].name<<endl;
-    sender.pxl_goal(onField[idMan].x, onField[idMan].y, 0); // --------------------------------------- can we do it this way? ------------------
+    //sender.pxl_goal(onField[idMan].x, onField[idMan].y, 0); // --------------------------------------- can we do it this way? ------------------
+    sender.send_goal(onField[idMan].position);
     
     //ask questions
     int tellingTruth = 0;
     int firstLady = 0;
-    for(int i=0; i<6; i++){
+    for(int i=0; i<6; i++){		
         if(onField[i].gender == FEMALE){
             
 			//sender.pxl_goal(onField[i].x, onField[i].y, 0);
@@ -857,6 +908,7 @@ while(k<6){
             } else {
 				cout<<"Not lying!"<<endl;
                 tellingTruth = 1;
+                cout<<"Position: "<< onField[i].position.target_pose.pose.position.x<<", "<<onField[i].position.target_pose.pose.position.y<<endl;
             }
             if(tellingTruth){
                 //firstLady = onField[i].id;
@@ -871,10 +923,9 @@ while(k<6){
     }
 
     //go to the first lady
-    cout<<"x: "<<onField[firstLady].x<<", y: "<<onField[firstLady].y<<endl;
-    sender.pxl_goal(onField[firstLady].x, onField[firstLady].y, 0);
-    
-    
+    //cout<<"x: "<<onField[firstLady].x<<", y: "<<onField[firstLady].y<<endl;
+    //sender.pxl_goal(onField[firstLady].x, onField[firstLady].y, 0);
+    sender.send_goal(onField[firstLady].position);
     int knowsWhichRing = 0;
     int knowsWhereRing = 0;
     int lWhich = 0;
@@ -932,14 +983,16 @@ while(k<6){
 			}
 		}
 		
-        sender.pxl_goal(onField[knowsWhichRing].x, onField[knowsWhichRing].y, 0);
+        //sender.pxl_goal(onField[knowsWhichRing].x, onField[knowsWhichRing].y, 0);
+        sender.send_goal(onField[knowsWhichRing].position);
 		if(lWhich){
 				mRing = sender.femaleWhichLying(onField[knowsWhichRing].name, knowsWhichRing);
 		} else {
                 mRing = sender.femaleWhich(onField[knowsWhichRing].name);
         }
 		
-        sender.pxl_goal(onField[knowsWhereRing].x, onField[knowsWhereRing].y, 0);
+        //sender.pxl_goal(onField[knowsWhereRing].x, onField[knowsWhereRing].y, 0);
+        sender.send_goal(onField[knowsWhereRing].position);
 		if(lWhere){
 			    cyl = sender.femaleWhereLying(onField[knowsWhereRing].name, knowsWhereRing);
 		} else {
@@ -949,11 +1002,15 @@ while(k<6){
     } else if(onField[knowsWhereRing].gender == FEMALE || onField[knowsWhichRing].gender == FEMALE){
         //go to the one of these two who is a man, and ask him the info, and then ask if the woman is lying
         if(onField[knowsWhereRing].gender == MALE){
-                sender.pxl_goal(onField[knowsWhereRing].x, onField[knowsWhereRing].y, 0);
+                //sender.pxl_goal(onField[knowsWhereRing].x, onField[knowsWhereRing].y, 0);
+                sender.send_goal(onField[knowsWhereRing].position);
+                
                 cyl = sender.maleWhere(onField[knowsWhereRing].name, knowsWhereRing);
                 int whichLL = sender.determineLying(onField[knowsWhereRing].name, knowsWhichRing);
 
-            sender.pxl_goal(onField[knowsWhichRing].x, onField[knowsWhichRing].y, 0);
+            //sender.pxl_goal(onField[knowsWhichRing].x, onField[knowsWhichRing].y, 0);
+            sender.send_goal(onField[knowsWhichRing].position);
+            
             if(whichLL == 1){
                 mRing = sender.femaleWhichLying(onField[knowsWhichRing].name, knowsWhichRing);
             } else {
@@ -965,7 +1022,9 @@ while(k<6){
 		} else {
 			//still the same, just the other way around
             
-            sender.pxl_goal(onField[knowsWhichRing].x, onField[knowsWhichRing].y, 0);
+            //sender.pxl_goal(onField[knowsWhichRing].x, onField[knowsWhichRing].y, 0);
+            sender.send_goal(onField[knowsWhichRing].position);
+            
             mRing = sender.maleWhich(onField[knowsWhichRing].name);
 
                 sender.go2meters(knowsWhichRing);
@@ -982,10 +1041,12 @@ while(k<6){
     } else {
 		//both are male
         //just go there and ask
-         sender.pxl_goal(onField[knowsWhichRing].x, onField[knowsWhichRing].y, 0);
+         //sender.pxl_goal(onField[knowsWhichRing].x, onField[knowsWhichRing].y, 0);
+         sender.send_goal(onField[knowsWhichRing].position);
          mRing = sender.maleWhich(onField[knowsWhichRing].name);
 
-         sender.pxl_goal(onField[knowsWhereRing].x, onField[knowsWhereRing].y, 0);
+         //sender.pxl_goal(onField[knowsWhereRing].x, onField[knowsWhereRing].y, 0);
+         sender.send_goal(onField[knowsWhereRing].position);
          cyl = sender.maleWhere(onField[knowsWhereRing].name, knowsWhereRing);   
 	}
 
@@ -1001,7 +1062,8 @@ while(k<6){
             break;
         }
     }
-    sender.pxl_goal(towers[cylinder].x, towers[cylinder].y, 0);
+    //sender.pxl_goal(towers[cylinder].x, towers[cylinder].y, 0);
+    sender.send_goal(onField[cylinder].position);
     sender.ask("I am delivering the " + mRing + " ring to the " + cyl + " tower. Cheers!");
     return 0; 
 }
