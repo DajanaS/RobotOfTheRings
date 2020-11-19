@@ -1,5 +1,0 @@
-<launch>
-  <node pkg="exercise3" type="blob" name="blob" output="screen">
-  </node>
-
-</launch>

@@ -1,3 +1,0 @@
-http://pointclouds.org/documentation/tutorials/cylinder_segmentation.php
-
-https://gist.github.com/felix-kolbe/6579354
