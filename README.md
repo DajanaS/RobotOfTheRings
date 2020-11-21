@@ -39,7 +39,7 @@ We faced two major issues when picking up the rings. First, due to the implement
 ### Picking up Rings: The Algorithm
 
 * Calculate an initial position of the robot using the first located position of the ring. Following the scheme presented in the previous section the closest point on the wall *P<sub>Wall<sub>* is calculated as well as the normal of the wall *n*, facing inside the map, and the orientation of the wall *v* which is the normal vector rotated by 90 degrees clockwise. All the direction vectors are normalized. The initial position *P<sub>init<sub>* is then calculated by the following formula:
-*P<subinit<sub>* = *P<sub>Wall<sub>* *+ 25cm \cdot n - 50cm \cdot v*.
+*P<sub>init<sub>* = *P<sub>Wall<sub>* *+ 25cm \cdot n - 50cm \cdot v*.
 Using this formula we made sure that we would always pick up the ring from the right side, given that *n* and *v* are calculated correctly. Furthermore the robot pose was orientated along vector *v*.
 * Try to re-detect the ring without localizing the detections on the map frame, to ensure that we do not loose any detections:
 
