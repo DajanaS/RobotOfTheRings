@@ -1,0 +1,8 @@
+<launch>
+
+	<include file="$(find exercise3)start_robot.launch"/>
+	<include file="$(find exercise4)amcl_demo.launch"/>
+	<include file="$(find exercise4)face_detector.launch"/>
+	<include file="$(find exercise4)localizer_mapper.launch"/>
+
+</launch>

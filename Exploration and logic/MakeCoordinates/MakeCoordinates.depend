@@ -1,0 +1,7 @@
+# depslib dependency file v1.0
+1490440996 source:c:\users\dajana\desktop\makecoordinates\main.cpp
+	<iostream>
+	<fstream>
+	<sstream>
+	<string>
+

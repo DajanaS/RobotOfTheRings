@@ -1,0 +1,8 @@
+<launch>
+
+  <node pkg="exercise3" type="send_goals" name="send_goals" output="screen">
+	<remap from="goal" to="/move_base/goal" />
+  </node>
+
+</launch>
+

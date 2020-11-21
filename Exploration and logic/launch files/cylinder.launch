@@ -1,0 +1,13 @@
+<launch>
+
+<!-- Zylinder -->
+	<node pkg="exercise6" type="cylinder" name="cylinder" 
+	output="screen"/>
+<!-- voxelgrid -->
+	<node pkg="exercise6" type="cloud_voxelgrid" name="cloud_voxelgrid" 
+	output="screen"/>
+<!-- zylinderMapper -->
+	<node pkg="competition3" type="zylinderMapper.py" name="zylinderMapper" 
+	output="screen"/>
+
+</launch>

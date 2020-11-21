@@ -1,0 +1,16 @@
+<launch>
+
+<!-- start_robot -->
+	<include file="$(find exercise3)/launch/start_robot.launch">
+  	</include>
+<!-- amcl_demo -->
+	<include file="$(find exercise4)/launch/amcl_demo.launch">
+  	</include>
+<!-- map_server -->
+	<node pkg="map_server" type="map_server" name="map_server" 
+	output="screen"  args="comp2_map_3.yaml"/>
+<!-- localizer -->
+	<include file="$(find exercise4)/launch/localizer.launch">
+  	</include>
+
+</launch>

@@ -1,0 +1,10 @@
+<launch>
+
+<!-- blob -->
+	<node pkg="competition3" type="blob" name="blob" 
+	output="screen"/>
+<!-- ringMapper -->
+	<node pkg="competition3" type="ringMapper.py" name="ringMapper" 
+	output="screen"/>
+
+</launch>

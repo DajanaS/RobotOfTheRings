@@ -1,0 +1,10 @@
+<launch>
+
+<!-- logic_behind-->
+	<node pkg="exercise3" type="logic_behind_2" name="logic_behind_2" 
+	output="screen"/>
+<!-- picGoals -->
+	<node pkg="comeptition3" type="picGoals" name="picGoals" 
+	output="screen"/>
+
+</launch>

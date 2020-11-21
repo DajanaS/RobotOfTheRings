@@ -1,0 +1,4 @@
+﻿Ssh: bash to initialize terminal
+move_base for movement (example check if the goal is reached)
+
+Tutorial: http://wiki.ros.org/turtlebot_navigation/Tutorials/Autonomously%20navigate%20in%20a%20known%20map
